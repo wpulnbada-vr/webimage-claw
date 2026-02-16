@@ -1,0 +1,23 @@
+# WebImageClaw systemd service
+# 설치: sudo cp webimage-claw.service /etc/systemd/system/
+#        sudo systemctl daemon-reload
+#        sudo systemctl enable --now webimage-claw
+#
+# 사용자 환경에 맞게 User, WorkingDirectory, ExecStart 경로를 수정하세요.
+
+[Unit]
+Description=WebImageClaw Image Scraper Server
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/home/%i/webimage-claw
+ExecStart=/usr/bin/env node src/server/index.js
+Restart=on-failure
+RestartSec=5
+Environment=PORT=3100
+Environment=HOST=0.0.0.0
+
+[Install]
+WantedBy=multi-user.target

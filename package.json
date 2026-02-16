@@ -1,0 +1,34 @@
+{
+  "name": "webimage-claw",
+  "version": "1.0.0",
+  "description": "WebImageClaw - Image Scraper with OpenClaw Integration",
+  "main": "src/desktop/main.js",
+  "scripts": {
+    "start": "node src/server/index.js",
+    "dev": "node src/server/index.js",
+    "electron": "electron src/desktop/main.js",
+    "build:frontend": "cd frontend && npm run build",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "setup:openclaw": "node scripts/setup-openclaw.js",
+    "setup:openclaw:sandbox": "node scripts/setup-openclaw.js --sandbox"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "puppeteer-core": "^24.37.3",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "@puppeteer/browsers": "^2.9.0",
+    "archiver": "^7.0.1",
+    "serve-index": "^1.9.2",
+    "sanitize-filename": "^1.6.3",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "extends": "electron-builder.yml"
+  }
+}

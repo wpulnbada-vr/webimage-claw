@@ -1,0 +1,27 @@
+appId: com.webimageclaw.desktop
+productName: WebImageClaw
+directories:
+  output: dist
+  buildResources: build
+files:
+  - src/**/*
+  - public/**/*
+  - package.json
+  - "!frontend/**"
+  - "!scripts/**"
+  - "!openclaw/**"
+asarUnpack:
+  - "node_modules/puppeteer-core/**"
+  - "node_modules/puppeteer-extra/**"
+  - "node_modules/puppeteer-extra-plugin-stealth/**"
+  - "node_modules/@puppeteer/**"
+win:
+  target: nsis
+  icon: build/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+linux:
+  target: AppImage
+  icon: build/icon.png
+  category: Utility

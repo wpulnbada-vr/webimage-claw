@@ -1,0 +1,8 @@
+node_modules/
+dist/
+downloads/
+history.json
+*.log
+.env
+frontend/node_modules/
+frontend/dist/
