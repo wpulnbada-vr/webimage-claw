@@ -100,8 +100,10 @@ function configureOpenClaw() {
   if (fs.existsSync(OPENCLAW_CONFIG)) {
     try {
       const raw = fs.readFileSync(OPENCLAW_CONFIG, 'utf-8');
-      // Strip JSON5 comments for parsing
-      const cleaned = raw.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+      // Strip JSON5 comments, then sanitize control chars in strings
+      let cleaned = raw.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+      // Remove unescaped control characters (common in auto-generated configs)
+      cleaned = cleaned.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
       config = JSON.parse(cleaned);
     } catch (err) {
       warn(`openclaw.json 파싱 실패: ${err.message}`);
