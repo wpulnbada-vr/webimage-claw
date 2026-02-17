@@ -34,7 +34,19 @@ export default function App() {
       fetchJobs();
       fetchHistory();
     }, 5000);
-    return () => clearInterval(interval);
+
+    const refresh = () => { fetchJobs(); fetchHistory(); };
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    const onFocus = () => refresh();
+
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [fetchJobs, fetchHistory]);
 
   const startScrape = async (url, keyword) => {
