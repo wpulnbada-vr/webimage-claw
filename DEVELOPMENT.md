@@ -2,6 +2,50 @@
 
 Technical documentation for developers working on WebImageClaw.
 
+**Current Version: 0.2.0**
+
+---
+
+## Changelog
+
+### v0.2.0 (2026-02-17)
+
+**Web Drive (File Manager)**
+- Grid/List 뷰 전환 (이미지 미리보기 그리드)
+- 파일/폴더 검색 및 정렬 (이름, 크기, 날짜)
+- 파일 공유 링크 생성 (임시 토큰 기반)
+- 파일/폴더 복사 및 이동 (Copy/Move)
+- 우클릭 컨텍스트 메뉴
+- 드래그 앤 드롭 업로드 영역
+- 이미지 미리보기 모달 (확대/축소)
+
+**OpenClaw 연동 웹 드라이브**
+- Discord/Telegram에서 OpenClaw 봇에게 파일 관리 명령 가능
+- `webclaw files [path]` — 원격 파일 목록 조회
+- `webclaw start <URL> [keyword]` — 이미지 수집 후 웹 드라이브에서 관리
+- API Key 인증으로 외부 접근 보안
+
+**Scraper 모듈 리팩토링**
+- 모놀리식 `scraper.js` (1,125줄) → 모듈 `scraper/` (15파일, 1,396줄)
+- Strategy + Registry 패턴 기반 사이트별 어댑터
+- Content Area 필터링 (사이드바 썸네일 제거)
+- 4단계 검색 파이프라인: Custom URL → WP `?s=` → Form 감지 → Category
+
+**인증 및 보안**
+- Admin 인증 (bcrypt + JWT)
+- API Key 관리 (`wih_` 접두사)
+- 공유 링크 토큰 생성/검증
+- 경로 탐색 보호
+
+**모니터링**
+- 시스템 모니터링 (CPU, 메모리, 디스크)
+- Discord 웹훅 알림
+- 작업 통계 차트
+
+### v0.1.0
+
+- 초기 릴리스: 기본 이미지 스크래핑 및 다운로드
+
 ---
 
 ## Architecture
@@ -15,10 +59,12 @@ Technical documentation for developers working on WebImageClaw.
 ├──────────┴──────────────┴──────────┴────────────────┤
 │                   Express API                        │
 │  /api/scrape  /api/jobs  /api/progress  /api/health  │
+│  /api/filemanager (copy, move, share, upload, zip)   │
 ├─────────────────────────────────────────────────────┤
 │                   Core Engine                        │
 │  JobManager (queue, lifecycle, events)               │
 │  ImageScraper (Puppeteer + CDP + stealth)            │
+│  FileManager (browse, copy, move, share, upload)     │
 │  ChromeFinder (cross-platform detection)             │
 └─────────────────────────────────────────────────────┘
 ```
@@ -132,6 +178,20 @@ function findChrome(customCachePath?: string): string | null
    - **Windows:** Program Files, LocalAppData (Chrome + Chromium)
    - **macOS:** `/Applications/Google Chrome.app`, `/Applications/Chromium.app`
    - **Linux:** `/usr/bin/google-chrome-stable`, `/usr/bin/chromium-browser`, `/snap/bin/chromium`
+
+### FileManager (`src/core/filemanager.js`)
+
+File management with copy, move, share link, and upload support.
+
+```javascript
+// Key API endpoints
+POST /api/filemanager/copy     // { src, dest } — Copy file/folder
+POST /api/filemanager/move     // { src, dest } — Move file/folder
+POST /api/filemanager/share    // { path } — Generate share token
+GET  /api/filemanager/shared/:token  // Access shared file via token
+```
+
+**Share Links:** Generates time-limited tokens (24h default) for file access without authentication. Tokens are stored in memory and expire automatically.
 
 ### Constants (`src/core/constants.js`)
 
@@ -250,7 +310,7 @@ Download a folder as a ZIP archive (streamed using `archiver`).
 ```json
 {
   "status": "ok",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "uptime": 3600,
   "hostname": "my-pc",
   "jobs": { "running": 1, "queued": 0, "completed": 5, "total": 6 }
@@ -351,6 +411,14 @@ React 19 + Vite 6 + Tailwind CSS v4.
 | `JobPanel` | `JobPanel.jsx` | Active job progress display |
 | `Sidebar` | `Sidebar.jsx` | Job history list |
 | `ImageGrid` | `ImageGrid.jsx` | Downloaded image thumbnails |
+| `FileManager` | `FileManager.jsx` | Web drive file management (v0.2) |
+| `FileGrid` | `fm/FileGrid.jsx` | Grid view with image thumbnails |
+| `FileList` | `fm/FileList.jsx` | List view with sort controls |
+| `FileToolbar` | `fm/FileToolbar.jsx` | Search, sort, view toggle |
+| `ContextMenu` | `fm/ContextMenu.jsx` | Right-click context menu |
+| `ImagePreview` | `fm/ImagePreview.jsx` | Full-size image preview modal |
+| `ShareModal` | `fm/ShareModal.jsx` | Share link generation UI |
+| `UploadDropZone` | `fm/UploadDropZone.jsx` | Drag & drop file upload |
 
 ### Build
 

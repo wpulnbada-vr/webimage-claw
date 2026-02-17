@@ -12,7 +12,7 @@ module.exports = function(jobManager) {
 
     res.json({
       status: 'ok',
-      version: '1.0.0',
+      version: '0.2.0',
       uptime: Math.floor(process.uptime()),
       hostname: os.hostname(),
       jobs: { running, queued, completed, total: jobs.length },

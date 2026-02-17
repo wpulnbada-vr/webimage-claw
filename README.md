@@ -1,13 +1,18 @@
 # WebImageClaw
 
+> **v0.2.0** — OpenClaw 연동 웹 드라이브
+
 **OpenClaw lacked a built-in way to download images from websites, which was frustrating — so I built this.**
 
-Tell your OpenClaw Discord bot "download images from this site" and it will automatically browse the website and save images to your PC. You can also use it directly via the desktop app or web UI. Manage downloaded files remotely through the dashboard with VPN.
+Tell your OpenClaw Discord bot "download images from this site" and it will automatically browse the website and save images to your PC. Use the **Web Drive** to manage downloaded files remotely — search, sort, preview, share, copy/move — all from your browser or through OpenClaw commands.
 
 ```
 In Discord:
   You: "@MartinClaw download landscape images from https://example.com/gallery"
   Bot: "Done! Downloaded 1,523 images in 45 minutes 12 seconds."
+
+  You: "@MartinClaw show my downloaded files"
+  Bot: "📁 landscape/ (1,523 files), portrait/ (892 files), ..."
 ```
 
 ---
@@ -49,11 +54,20 @@ Discord / Telegram User
 - **Duplicate Filtering** — Skips thumbnails, icons, and duplicates by size/pattern
 - **Job Queue** — 2 concurrent jobs with automatic queuing
 
+### Web Drive (v0.2)
+- **Grid / List View** — Toggle between image thumbnail grid and detailed file list
+- **Search & Sort** — Find files by name, sort by name/size/date
+- **Share Links** — Generate temporary share URLs for files (token-based, 24h expiry)
+- **Copy & Move** — Copy or move files/folders between directories
+- **Context Menu** — Right-click for quick actions (copy, move, delete, share)
+- **Drag & Drop Upload** — Drop files directly into the browser to upload
+- **Image Preview** — Click to view full-size images with zoom
+- **OpenClaw Web Drive** — Manage files remotely via Discord/Telegram bot commands
+
 ### Monitoring & Management
 - **System Monitoring** — Real-time CPU, memory, disk, Puppeteer status
 - **Job Statistics** — Success rate donut, site/keyword charts, 30-day activity graph
 - **Discord Alerts** — Webhook notifications for completion, failure, and disk warnings
-- **File Manager** — Browse, upload, download, delete files from the dashboard
 - **ZIP Export** — Download selected files as .zip archive
 - **History Management** — Persistent history with bulk clear
 
@@ -115,7 +129,7 @@ Open `http://localhost:3100` in your browser. On first access, set an admin pass
 **Verify the server is running:**
 ```bash
 curl http://localhost:3100/api/health
-# Response: {"status":"ok","version":"1.0.0",...}
+# Response: {"status":"ok","version":"0.2.0",...}
 ```
 
 ### Step 3: Use the Dashboard
@@ -274,6 +288,10 @@ webclaw files [path]           # List downloaded files (requires API key)
 | GET | `/api/filemanager?path=` | Yes | List directory |
 | POST | `/api/filemanager/upload` | Yes | Upload files |
 | POST | `/api/filemanager/mkdir` | Yes | Create folder |
+| POST | `/api/filemanager/copy` | Yes | Copy file/folder |
+| POST | `/api/filemanager/move` | Yes | Move file/folder |
+| POST | `/api/filemanager/share` | Yes | Generate share link |
+| GET | `/api/filemanager/shared/:token` | | Access shared file |
 | DELETE | `/api/filemanager?path=` | Yes | Delete file/folder |
 | POST | `/api/filemanager/download-zip` | Yes | Download as ZIP |
 | GET | `/api/monitor/system` | | System metrics |
@@ -350,4 +368,4 @@ MIT License
 
 ---
 
-*WebImageClaw — Built because OpenClaw couldn't download images from websites, and that was annoying.*
+*WebImageClaw v0.2 — Image scraper + web drive, powered by OpenClaw.*
