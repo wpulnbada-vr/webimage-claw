@@ -2,7 +2,7 @@
 
 **OpenClaw lacked a built-in way to download images from websites, which was frustrating — so I built this.**
 
-Tell your OpenClaw Discord bot "download images from this site" and it will automatically browse the website and save images to your PC. You can also use it directly via the desktop app or web UI.
+Tell your OpenClaw Discord bot "download images from this site" and it will automatically browse the website and save images to your PC. You can also use it directly via the desktop app or web UI. Manage downloaded files remotely through the dashboard with VPN.
 
 ```
 In Discord:
@@ -12,10 +12,18 @@ In Discord:
 
 ---
 
+## Screenshots
+
+| Scraping Dashboard | Monitoring & API Keys |
+|:--:|:--:|
+| ![Main Dashboard](docs/screenshot-main.png) | ![Monitoring](docs/screenshot-monitor.png) |
+
+---
+
 ## How It Works
 
 ```
-Discord User
+Discord / Telegram User
   -> OpenClaw Bot (MartinClaw)
     -> exec webclaw start <URL> <keyword>
       -> WebImageClaw Server (running on your PC)
@@ -26,14 +34,44 @@ Discord User
 ```
 
 - **OpenClaw**: AI assistant for Discord, WhatsApp, Telegram, etc. ([openclaw.ai](https://openclaw.ai))
-- **WebImageClaw**: Website image scraper (this project)
+- **WebImageClaw**: Website image scraper with dashboard (this project)
 - **webclaw CLI**: Command-line tool that bridges OpenClaw and WebImageClaw
 
 ---
 
-## Requirements
+## Features
 
-### Prerequisites
+### Image Scraping
+- **Batch Image Download** — Enter a URL and keyword to collect all matching images
+- **Smart Page Navigation** — Follows pagination, galleries, and sub-pages
+- **Lazy-load Aware** — Scrolls to trigger lazy content, parses `data-src` and `srcset`
+- **High-fidelity Capture** — Chrome DevTools Protocol captures full-resolution originals
+- **Duplicate Filtering** — Skips thumbnails, icons, and duplicates by size/pattern
+- **Job Queue** — 2 concurrent jobs with automatic queuing
+
+### Monitoring & Management
+- **System Monitoring** — Real-time CPU, memory, disk, Puppeteer status
+- **Job Statistics** — Success rate donut, site/keyword charts, 30-day activity graph
+- **Discord Alerts** — Webhook notifications for completion, failure, and disk warnings
+- **File Manager** — Browse, upload, download, delete files from the dashboard
+- **ZIP Export** — Download selected files as .zip archive
+- **History Management** — Persistent history with bulk clear
+
+### Security & Remote Access
+- **Admin Authentication** — Password-protected dashboard (bcrypt + JWT)
+- **API Keys** — `wih_` prefixed keys for external service access
+- **Path Traversal Protection** — All file operations validated against downloads directory
+- **Remote Dashboard** — Access via VPN to manage files from anywhere
+
+### OpenClaw Integration
+- **webclaw CLI** — Zero-dependency CLI (Node.js built-in `http` only) for Docker sandbox compatibility
+- **Auto Server Discovery** — localhost > host.docker.internal > Docker gateway > bridge IPs
+- **API Key Auth** — `WEBCLAW_API_KEY` env var or `~/.webclaw-key` file
+- **Auto Provisioning** — `setup-openclaw.js` installs CLI, configures OpenClaw, generates API key
+
+---
+
+## Requirements
 
 | Requirement | Minimum Version | How to Check |
 |-------------|-----------------|--------------|
@@ -51,13 +89,6 @@ Discord User
 | **Ubuntu/Debian** | Yes | Yes | Yes |
 | **Other Linux** | Yes | Yes | Yes |
 
-### Ports Used
-
-| Port | Purpose | How to Change |
-|------|---------|---------------|
-| **3100** | WebImageClaw server (default) | `PORT=3200 npm start` |
-| **18789** | OpenClaw gateway (default) | Change in OpenClaw settings |
-
 ---
 
 ## Installation Guide
@@ -65,11 +96,8 @@ Discord User
 ### Step 1: Download WebImageClaw
 
 ```bash
-# Clone the project
 git clone https://github.com/wpulnbada-vr/webimage-claw.git
 cd webimage-claw
-
-# Install dependencies
 npm install
 
 # Build the frontend
@@ -79,11 +107,10 @@ cd frontend && npm install && npm run build && cd ..
 ### Step 2: Start the Server
 
 ```bash
-# Start server (default port 3100)
 npm start
 ```
 
-Once the server is running, open `http://localhost:3100` in your browser to access the web UI.
+Open `http://localhost:3100` in your browser. On first access, set an admin password.
 
 **Verify the server is running:**
 ```bash
@@ -91,41 +118,27 @@ curl http://localhost:3100/api/health
 # Response: {"status":"ok","version":"1.0.0",...}
 ```
 
-### Step 3: Use the Web UI
+### Step 3: Use the Dashboard
 
-1. Open `http://localhost:3100` in your browser
-2. Enter the website URL you want to scrape images from
-3. (Optional) Enter a keyword to filter specific items
-4. Click "Start Scraping"
-5. Watch real-time progress
-6. Find downloaded images in the `downloads/` folder
+| Tab | Description |
+|-----|-------------|
+| **Jobs** | Enter URLs, start scraping, view real-time progress and history |
+| **Monitoring** | System metrics, job statistics, Discord alerts, API key management |
+| **Files** | Browse downloads, upload/delete files, download as ZIP (requires login) |
 
 ---
 
 ## OpenClaw Integration Guide
 
-Integrating with OpenClaw lets you request image downloads via Discord chat.
-
 ### Prerequisites
 
-1. **OpenClaw must be installed**
+1. **OpenClaw installed and configured**
    ```bash
-   # Install OpenClaw (if not already installed)
    curl -fsSL https://openclaw.ai/install.sh | bash
-
-   # Verify installation
-   openclaw --version
-   ```
-
-2. **OpenClaw initial setup must be complete**
-   ```bash
    openclaw onboard
    ```
-   - Select a model (Gemini, Ollama, etc.)
-   - Configure Discord bot token
-   - Confirm gateway is running
 
-3. **WebImageClaw server must be running**
+2. **WebImageClaw server running**
    ```bash
    npm start
    ```
@@ -133,56 +146,34 @@ Integrating with OpenClaw lets you request image downloads via Discord chat.
 ### Automatic Setup
 
 ```bash
-# Run from the webimage-claw directory
 npm run setup:openclaw
 ```
 
-This command automatically:
-- Installs the `webclaw` CLI to `~/.local/bin/` (Windows: `%LOCALAPPDATA%\WebImageClaw\bin\`)
-- Adds `pathPrepend` config to OpenClaw's `openclaw.json`
-- Updates OpenClaw workspace `TOOLS.md` and `SOUL.md`
+This command:
+- Installs `webclaw` CLI to `~/.local/bin/`
+- Configures OpenClaw's `openclaw.json` with `pathPrepend`
+- Updates workspace `TOOLS.md` and `SOUL.md`
+- Generates an API key and saves to `~/.webclaw-key`
 
-**If using Docker sandbox mode:**
+**Docker sandbox mode:**
 ```bash
 npm run setup:openclaw:sandbox
 ```
 
 ### Manual Setup
 
-If the automatic setup fails, follow these steps manually.
-
 **1. Install the webclaw CLI:**
 ```bash
-# Linux/macOS
 mkdir -p ~/.local/bin
 cp src/cli/webclaw.js ~/.local/bin/webclaw.js
-
-# Create a shell wrapper
 cat > ~/.local/bin/webclaw << 'EOF'
 #!/bin/bash
 exec node "$(dirname "$0")/webclaw.js" "$@"
 EOF
 chmod +x ~/.local/bin/webclaw ~/.local/bin/webclaw.js
-
-# Verify
-webclaw
 ```
 
-```powershell
-# Windows (PowerShell)
-$dir = "$env:LOCALAPPDATA\WebImageClaw\bin"
-New-Item -ItemType Directory -Force -Path $dir
-Copy-Item src\cli\webclaw.js "$dir\webclaw.js"
-Set-Content "$dir\webclaw.cmd" '@echo off\r\nnode "%~dp0webclaw.js" %*'
-
-# Add to PATH
-[System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";$dir", "User")
-```
-
-**2. Edit OpenClaw config:**
-
-Open `~/.openclaw/openclaw.json` and add:
-
+**2. Edit OpenClaw config** (`~/.openclaw/openclaw.json`):
 ```json
 {
   "tools": {
@@ -193,109 +184,54 @@ Open `~/.openclaw/openclaw.json` and add:
 }
 ```
 
-> On Windows, change the `pathPrepend` path to `%LOCALAPPDATA%\\WebImageClaw\\bin`.
-
-**3. Update OpenClaw workspace files:**
-
-Add to `~/.openclaw/workspace/TOOLS.md`:
-```markdown
-## webclaw
-- Start scraping: `webclaw start <URL> <keyword>`
-- Check status: `webclaw status [jobId]`
-- Recent jobs: `webclaw list`
+**3. Generate an API key** from the Dashboard > Monitoring > API Keys section, then save it:
+```bash
+echo "wih_your_key_here" > ~/.webclaw-key
+chmod 600 ~/.webclaw-key
 ```
 
-Add to `~/.openclaw/workspace/SOUL.md`:
-```markdown
-- **Image download requests** -> use `exec webclaw start <URL> <keyword>`
-```
-
-**4. Restart the OpenClaw gateway:**
+**4. Restart OpenClaw gateway:**
 ```bash
 openclaw gateway --force
 ```
 
-### Testing the Integration
+### Testing
 
 ```bash
-# Direct CLI test
-webclaw list
-
-# Test via OpenClaw agent
-openclaw agent --agent main --message "run webclaw list"
-
-# Test via Discord
-# -> @MartinClaw run webclaw list
+webclaw list                    # Direct CLI test
+webclaw files /                 # List files (requires API key)
 ```
 
 ---
 
 ## Running as a Linux Service
 
-To run the server in the background with auto-start on boot:
-
 ```bash
-# Copy the service file (edit paths to match your username)
 sudo cp webimage-claw.service /etc/systemd/system/
-
-# Edit the service file — verify User, WorkingDirectory, ExecStart
-sudo nano /etc/systemd/system/webimage-claw.service
-
-# Enable and start
+sudo nano /etc/systemd/system/webimage-claw.service  # Edit User and paths
 sudo systemctl daemon-reload
 sudo systemctl enable webimage-claw
 sudo systemctl start webimage-claw
-
-# Check status
-sudo systemctl status webimage-claw
 ```
-
-**Key fields to edit in `webimage-claw.service`:**
-```ini
-[Service]
-User=yourusername
-WorkingDirectory=/home/yourusername/webimage-claw
-ExecStart=/usr/bin/env node src/server/index.js
-Environment=PORT=3100
-Environment=HOST=0.0.0.0
-```
-
-> Find your node path with `which node`.
-> If using fnm/nvm, use the full path, e.g.:
-> `ExecStart=/home/yourusername/.local/share/fnm/aliases/default/bin/node src/server/index.js`
 
 ---
 
 ## Docker Environment
 
-If OpenClaw runs inside a Docker sandbox, the container needs access to the host's WebImageClaw server.
-
-### Firewall Setup (Linux)
-
-Allow Docker containers to reach port 3100 on the host:
+If OpenClaw runs inside a Docker sandbox, allow containers to reach port 3100:
 
 ```bash
-# Using UFW
+# UFW
 sudo ufw allow from 172.16.0.0/12 to any port 3100 proto tcp comment 'WebImageClaw Docker access'
-
-# Using iptables directly
-sudo iptables -I INPUT 1 -s 172.16.0.0/12 -p tcp --dport 3100 -j ACCEPT
 ```
 
-### Automatic Server Discovery
+### Server Discovery Order
 
-The webclaw CLI automatically discovers the server in this order:
-
-1. `WEBCLAW_SERVER` environment variable (explicit override)
-2. `http://localhost:3100` (running on host directly)
-3. `http://host.docker.internal:3100` (Docker Desktop on macOS/Windows)
-4. Docker default gateway IP (Linux — auto-parsed from `/proc/net/route`)
-5. `http://172.17.0.1:3100` (common Docker bridge IP)
-
-To specify manually:
-```bash
-WEBCLAW_SERVER=http://192.168.1.100:3100 webclaw list
-```
+1. `WEBCLAW_SERVER` environment variable
+2. `http://localhost:3100`
+3. `http://host.docker.internal:3100` (Docker Desktop)
+4. Docker default gateway IP (auto-parsed from `/proc/net/route`)
+5. `http://172.17.0.1:3100` (Docker bridge)
 
 ---
 
@@ -315,24 +251,33 @@ npm run electron               # Start as Electron desktop app
 webclaw start <URL> [keyword]  # Start scraping
 webclaw status [jobId]         # Check job status
 webclaw list                   # List recent jobs
+webclaw files [path]           # List downloaded files (requires API key)
 ```
 
 ### API Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/health` | Server health check |
-| POST | `/api/scrape` | Start scraping (`{url, keyword}`) |
-| GET | `/api/jobs` | List active jobs |
-| GET | `/api/jobs/:id` | Job details |
-| GET | `/api/jobs/:id/summary` | Job summary (plain text) |
-| GET | `/api/progress/:id` | Progress SSE stream |
-| GET | `/api/history` | Full history |
-| POST | `/api/abort/:id` | Abort a job |
-| DELETE | `/api/jobs/:id` | Delete a job |
-| GET | `/api/files/:folder` | List downloaded files |
-| GET | `/api/zip/:folder` | Download as ZIP |
-| GET | `/browse/:folder` | Paginated image gallery |
+| Method | Path | Auth | Description |
+|--------|------|:----:|-------------|
+| GET | `/api/health` | | Server health check |
+| POST | `/api/scrape` | | Start scraping (`{url, keyword}`) |
+| GET | `/api/jobs` | | List active jobs |
+| GET | `/api/jobs/:id/summary` | | Job summary (plain text) |
+| GET | `/api/progress/:id` | | Progress SSE stream |
+| GET | `/api/history` | | Full history |
+| DELETE | `/api/history` | | Clear all history |
+| POST | `/api/abort/:id` | | Abort a job |
+| GET | `/api/auth/status` | | Auth status |
+| POST | `/api/auth/setup` | | Initial password setup |
+| POST | `/api/auth/login` | | Login (returns JWT) |
+| GET | `/api/auth/api-keys` | Yes | List API keys |
+| POST | `/api/auth/api-keys` | Yes | Generate API key |
+| GET | `/api/filemanager?path=` | Yes | List directory |
+| POST | `/api/filemanager/upload` | Yes | Upload files |
+| POST | `/api/filemanager/mkdir` | Yes | Create folder |
+| DELETE | `/api/filemanager?path=` | Yes | Delete file/folder |
+| POST | `/api/filemanager/download-zip` | Yes | Download as ZIP |
+| GET | `/api/monitor/system` | | System metrics |
+| GET | `/api/monitor/stats` | | Job statistics |
 
 ### Build
 
@@ -358,14 +303,8 @@ npm run build:linux             # Linux package
 
 ### OpenClaw bot not responding
 - Check gateway status: `openclaw status`
-- Check Discord channel: `openclaw status --deep`
-- If `groupPolicy` is `"allowlist"`, add your guild ID to the config
 - Verify the `exec` tool is enabled
-
-### Slow download speed
-- Default concurrent downloads: 3
-- Cloudflare protection triggers an automatic 30-second wait
-- Speed depends on your network and the target site
+- If `groupPolicy` is `"allowlist"`, add your guild ID to the config
 
 ---
 
@@ -375,8 +314,11 @@ npm run build:linux             # Linux package
 webimage-claw/
 ├── src/
 │   ├── core/                 # Core engine
-│   │   ├── scraper.js        # Image scraper (Puppeteer)
+│   │   ├── scraper.js        # Image scraper (Puppeteer + CDP)
 │   │   ├── job-manager.js    # Job queue management
+│   │   ├── auth.js           # Authentication (bcrypt + JWT + API keys)
+│   │   ├── filemanager.js    # File management API
+│   │   ├── monitor.js        # System monitoring + Discord alerts
 │   │   ├── chrome-finder.js  # Cross-platform Chrome detection
 │   │   └── constants.js      # Constants
 │   ├── server/               # Express API server
@@ -387,11 +329,11 @@ webimage-claw/
 │   │   ├── preload.js        # IPC bridge
 │   │   └── chrome-manager.js # Chrome download manager
 │   └── cli/
-│       └── webclaw.js        # OpenClaw CLI tool
-├── frontend/                 # React + Vite + Tailwind v4
+│       └── webclaw.js        # OpenClaw CLI tool (zero dependencies)
+├── frontend/                 # React 19 + Vite 6 + Tailwind CSS v4
 ├── public/                   # Frontend build output
 ├── scripts/
-│   └── setup-openclaw.js     # OpenClaw integration setup
+│   └── setup-openclaw.js     # OpenClaw integration + API key setup
 ├── openclaw/
 │   └── webclaw.js            # CLI copy for OpenClaw workspace
 ├── downloads/                # Downloaded images (git-ignored)
@@ -408,4 +350,4 @@ MIT License
 
 ---
 
-*WebImageClaw v1.0.0 — Built because OpenClaw couldn't download images from websites, and that was annoying.*
+*WebImageClaw — Built because OpenClaw couldn't download images from websites, and that was annoying.*
