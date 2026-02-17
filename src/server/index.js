@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const serveIndex = require('serve-index');
+// serve-index removed for security
 
 const JobManager = require('../core/job-manager');
 const Auth = require('../core/auth');
@@ -57,10 +57,11 @@ function startServer(options = {}) {
   });
 
   const app = express();
-  app.use(cors());
+  app.use(cors({ origin: true, credentials: true }));
   app.use(express.json());
   app.use(express.static(publicDir));
-  app.use('/downloads', express.static(downloadsDir), serveIndex(downloadsDir, { icons: true }));
+  // /downloads — auth-protected static file serving
+  app.use('/downloads', Auth.authMiddleware, express.static(downloadsDir));
 
   // --- Public API (no auth) ---
   app.use('/api/scrape', scrapeRoute(jobManager));
@@ -77,7 +78,7 @@ function startServer(options = {}) {
     }
     res.json(jobManager.getHistory());
   });
-  app.use('/browse', browseRoute(downloadsDir));
+  app.use('/browse', Auth.authMiddleware, browseRoute(downloadsDir));
 
   // POST /api/abort/:id
   app.post('/api/abort/:id', (req, res) => {
@@ -157,7 +158,7 @@ function startServer(options = {}) {
     res.json(masked);
   });
 
-  app.post('/api/monitor/config', (req, res) => {
+  app.post('/api/monitor/config', Auth.authMiddleware, (req, res) => {
     try {
       const config = Monitor.loadConfig();
       const { webhookUrl, enabled, notifyOnComplete, notifyOnFail, notifyOnDiskWarning, diskWarningThresholdMB } = req.body;
@@ -174,7 +175,7 @@ function startServer(options = {}) {
     }
   });
 
-  app.post('/api/monitor/test-alert', async (req, res) => {
+  app.post('/api/monitor/test-alert', Auth.authMiddleware, async (req, res) => {
     const config = Monitor.loadConfig();
     if (!config.discord.webhookUrl) return res.status(400).json({ error: 'No webhook URL configured' });
     const ok = await Monitor.sendDiscordAlert(config, 'test', {});

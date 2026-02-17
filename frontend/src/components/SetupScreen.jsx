@@ -33,7 +33,7 @@ export default function SetupScreen({ onComplete }) {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-surface border border-border rounded-lg p-6 w-full max-w-sm space-y-5">
         <div className="text-center">
-          <h1 className="text-lg font-bold text-accent">WebImageHere</h1>
+          <h1 className="text-lg font-bold text-accent">WebImageClaw</h1>
           <p className="text-xs text-muted mt-1">관리자 비밀번호를 설정하세요</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
