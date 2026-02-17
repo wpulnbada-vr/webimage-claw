@@ -38,6 +38,25 @@ export default function Sidebar({ history, selectedJob, onSelect, onDelete }) {
                 {item.result.total} images
               </div>
             )}
+            {item.status === 'completed' && item.result?.total > 0 && item.result?.folder && (
+              <div className="flex items-center gap-2 mt-1 pl-4" onClick={e => e.stopPropagation()}>
+                <a
+                  href={`/browse/${encodeURIComponent(item.result.folder)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[10px] text-accent hover:underline"
+                >
+                  Browse
+                </a>
+                <a
+                  href={`/api/zip/${encodeURIComponent(item.result.folder)}`}
+                  download={`${item.result.folder}.zip`}
+                  className="text-[10px] text-green hover:underline"
+                >
+                  ZIP
+                </a>
+              </div>
+            )}
           </button>
         ))}
       </div>

@@ -11,6 +11,7 @@ const jobsRoute = require('./routes/jobs');
 const filesRoute = require('./routes/files');
 const { zipRoute } = require('./routes/files');
 const healthRoute = require('./routes/health');
+const browseRoute = require('./routes/browse');
 
 /**
  * Start the WebImageClaw Express server.
@@ -56,6 +57,7 @@ function startServer(options = {}) {
   app.use('/api/zip', zipRoute(downloadsDir));
   app.use('/api/health', healthRoute(jobManager));
   app.use('/api/history', (req, res) => res.json(jobManager.getHistory()));
+  app.use('/browse', browseRoute(downloadsDir));
 
   // POST /api/abort/:id (separate from jobs route for backwards compat)
   app.post('/api/abort/:id', (req, res) => {
