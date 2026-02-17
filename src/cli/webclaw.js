@@ -10,10 +10,20 @@
 
 const http = require('http');
 const os = require('os');
+const path = require('path');
 
 const DEFAULT_PORT = 3100;
 const POLL_INTERVAL = 10000;
 const MAX_POLL_TIME = 300000; // 5 min
+
+// API Key: env var or ~/.webclaw-key file
+const API_KEY = process.env.WEBCLAW_API_KEY || (() => {
+  try {
+    const fs = require('fs');
+    const keyFile = path.join(os.homedir(), '.webclaw-key');
+    return fs.readFileSync(keyFile, 'utf-8').trim();
+  } catch { return ''; }
+})();
 
 // --- Server Discovery ---
 
@@ -121,6 +131,10 @@ function request(method, path, body) {
       headers: {},
       timeout: 15000,
     };
+
+    if (API_KEY) {
+      options.headers['X-API-Key'] = API_KEY;
+    }
 
     if (body) {
       const data = JSON.stringify(body);
@@ -294,6 +308,51 @@ async function cmdList() {
   }
 }
 
+async function cmdFiles(dirPath) {
+  await ensureServer();
+
+  if (!API_KEY) {
+    log('Error: API Key required for file management.');
+    log('Set WEBCLAW_API_KEY env var or save key to ~/.webclaw-key');
+    process.exit(1);
+  }
+
+  const p = dirPath || '/';
+  let data;
+  try {
+    data = await request('GET', `/api/filemanager?path=${encodeURIComponent(p)}`);
+  } catch (err) {
+    log(`Error: ${err.message}`);
+    process.exit(1);
+  }
+
+  if (data.error) {
+    log(`Error: ${data.error}`);
+    process.exit(1);
+  }
+
+  log(`Path: ${data.path || p}`);
+  const items = data.items || [];
+  if (items.length === 0) {
+    log('(empty)');
+    return;
+  }
+
+  for (const item of items) {
+    const type = item.type === 'directory' ? '[DIR]' : '     ';
+    const size = item.size != null ? formatFileSize(item.size) : '';
+    log(`  ${type} ${item.name}${size ? '  ' + size : ''}`);
+  }
+  log(`Total: ${items.length} items`);
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+}
+
 // --- Main ---
 const [,, cmd, ...args] = process.argv;
 
@@ -316,6 +375,12 @@ switch (cmd) {
       process.exit(1);
     });
     break;
+  case 'files':
+    cmdFiles(args[0]).catch(err => {
+      log(`Error: ${err.message}`);
+      process.exit(1);
+    });
+    break;
   default:
     log('WebImageClaw CLI');
     log('');
@@ -323,10 +388,14 @@ switch (cmd) {
     log('  webclaw start <URL> [keyword]  — Start scraping');
     log('  webclaw status [jobId]         — Check job status');
     log('  webclaw list                   — List recent jobs');
+    log('  webclaw files [path]           — List files (requires API key)');
     log('');
     log('Server:');
     log(`  Default port: ${DEFAULT_PORT}`);
     log('  Manual override: WEBCLAW_SERVER=http://IP:PORT');
     log('  Auto-discovery: localhost → host.docker.internal → 172.17.0.1');
+    log('');
+    log('Auth:');
+    log('  WEBCLAW_API_KEY env var or ~/.webclaw-key file');
     break;
 }

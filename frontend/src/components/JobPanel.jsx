@@ -1,125 +1,168 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react'
+import ImageGrid from './ImageGrid'
 
-const STATUS_COLORS = {
-  running: 'text-accent',
-  queued: 'text-yellow',
-  completed: 'text-green',
-  failed: 'text-red',
-  aborted: 'text-orange',
-};
+const LOG_COLORS = {
+  status: 'text-accent',
+  cf: 'text-yellow',
+  search: 'text-green',
+  post: 'text-muted',
+  found: 'text-green',
+  download: 'text-text',
+  complete: 'text-green font-semibold',
+  error: 'text-red',
+}
 
-const STATUS_LABELS = {
-  running: 'Running',
-  queued: 'Queued',
-  completed: 'Completed',
-  failed: 'Failed',
-  aborted: 'Aborted',
-};
-
-export default function JobPanel({ job, liveJob, onAbort, onDelete }) {
-  const [events, setEvents] = useState([]);
-  const logRef = useRef(null);
-  const esRef = useRef(null);
+export default function JobPanel({ jobId, url, keyword, onDone, onDelete }) {
+  const [logs, setLogs] = useState([])
+  const [progress, setProgress] = useState(0)
+  const [label, setLabel] = useState('시작 중...')
+  const [stats, setStats] = useState('')
+  const [done, setDone] = useState(false)
+  const [folder, setFolder] = useState(null)
+  const logRef = useRef(null)
 
   useEffect(() => {
-    setEvents([]);
-    if (!job) return;
-    if (esRef.current) { esRef.current.close(); esRef.current = null; }
-
-    const es = new EventSource(`/api/progress/${job.id}`);
-    esRef.current = es;
+    const es = new EventSource(`/api/progress/${jobId}`)
 
     es.onmessage = (e) => {
-      try {
-        const event = JSON.parse(e.data);
-        setEvents(prev => [...prev, event]);
-      } catch {}
-    };
+      const ev = JSON.parse(e.data)
+      handleEvent(ev)
+    }
 
     es.onerror = () => {
-      es.close();
-      esRef.current = null;
-    };
+      es.close()
+    }
 
-    return () => { es.close(); esRef.current = null; };
-  }, [job?.id]);
+    return () => es.close()
+  }, [jobId])
 
   useEffect(() => {
     if (logRef.current) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
+      logRef.current.scrollTop = logRef.current.scrollHeight
     }
-  }, [events]);
+  }, [logs])
 
-  if (!job) return null;
+  const handleEvent = (ev) => {
+    const time = new Date().toLocaleTimeString('ko-KR', { hour12: false })
 
-  const status = liveJob?.status || job.status;
-  const isActive = status === 'running' || status === 'queued';
-  const lastEvent = events[events.length - 1] || liveJob?.lastEvent;
-
-  let progressPct = 0;
-  if (lastEvent?.type === 'download' && lastEvent.total > 0) {
-    progressPct = Math.round((lastEvent.current / lastEvent.total) * 100);
-  } else if (status === 'completed') {
-    progressPct = 100;
+    switch (ev.type) {
+      case 'status':
+        addLog(ev.type, time, ev.message)
+        setLabel(ev.message)
+        break
+      case 'cf':
+        updateLog(ev.type, time, ev.message)
+        setLabel(ev.message)
+        break
+      case 'search':
+        addLog(ev.type, time, `검색 완료: ${ev.pages}페이지, ${ev.posts}개 포스트`)
+        break
+      case 'post':
+        updateLog(ev.type, time, `[${ev.current}/${ev.total}] ${ev.title}`)
+        setLabel(`포스트 ${ev.current}/${ev.total}`)
+        setProgress((ev.current / ev.total) * 30)
+        break
+      case 'found':
+        addLog(ev.type, time, ev.message)
+        break
+      case 'download':
+        updateLog(ev.type, time, `다운로드 ${ev.current}/${ev.total}`)
+        setLabel(`다운로드 ${ev.current}/${ev.total}`)
+        setStats(`${ev.current} / ${ev.total}`)
+        if (ev.total > 0) setProgress(30 + (ev.current / ev.total) * 70)
+        break
+      case 'complete':
+        addLog(ev.type, time, `완료! ${ev.total}개 이미지 (${ev.duration})`)
+        setLabel('완료!')
+        setProgress(100)
+        setStats(`${ev.total} images in ${ev.duration}`)
+        setFolder(ev.folder)
+        setDone(true)
+        onDone?.()
+        break
+      case 'error':
+        addLog(ev.type, time, ev.message)
+        break
+    }
   }
 
+  const addLog = (type, time, msg) => {
+    setLogs(prev => [...prev, { type, time, msg, id: Date.now() + Math.random() }])
+  }
+
+  const updateLog = (type, time, msg) => {
+    setLogs(prev => {
+      if (prev.length > 0 && prev[prev.length - 1].type === type) {
+        const next = [...prev]
+        next[next.length - 1] = { type, time, msg, id: next[next.length - 1].id }
+        return next
+      }
+      return [...prev, { type, time, msg, id: Date.now() + Math.random() }]
+    })
+  }
+
+  const handleAbort = async () => {
+    await fetch(`/api/abort/${jobId}`, { method: 'POST' })
+    addLog('error', new Date().toLocaleTimeString('ko-KR', { hour12: false }), '작업 중지됨')
+    setDone(true)
+  }
+
+  const handleDelete = async () => {
+    await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' })
+    onDelete?.(jobId)
+  }
+
+  let hostname = ''
+  try { hostname = new URL(url).hostname } catch { hostname = url }
+
   return (
-    <div className="bg-surface border-b border-border p-4 shrink-0">
-      <div className="flex items-center justify-between mb-2">
+    <div className="bg-surface border border-border rounded-lg overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border">
         <div className="flex items-center gap-3">
-          <span className={`text-sm font-medium ${STATUS_COLORS[status]}`}>
-            {isActive && <span className="inline-block w-2 h-2 rounded-full bg-current animate-pulse mr-1.5" />}
-            {STATUS_LABELS[status] || status}
-          </span>
-          <span className="text-xs text-muted truncate max-w-md">{job.keyword || job.url}</span>
+          <span className="font-semibold text-sm">{keyword || '(direct)'}</span>
+          <span className="text-xs text-muted">{hostname}</span>
+          {!done && <span className="text-xs text-yellow animate-pulse">{label}</span>}
+          {done && <span className="text-xs text-green">{label}</span>}
         </div>
-        <div className="flex gap-2">
-          {isActive && (
-            <button
-              onClick={() => onAbort(job.id)}
-              className="text-xs text-red hover:text-red/80 px-2 py-1 border border-red/30 rounded transition"
-            >
-              Abort
+        <div className="flex gap-1.5">
+          {!done && (
+            <button onClick={handleAbort}
+              className="text-xs bg-red text-white px-3 py-1 rounded cursor-pointer hover:opacity-80">
+              중지
             </button>
           )}
-          <button
-            onClick={() => onDelete(job.id)}
-            className="text-xs text-muted hover:text-red px-2 py-1 border border-border rounded transition"
-          >
-            Delete
+          <button onClick={handleDelete}
+            className="text-xs bg-surface border border-border text-muted px-3 py-1 rounded cursor-pointer hover:border-red hover:text-red transition-colors">
+            삭제
           </button>
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="h-1.5 bg-bg rounded overflow-hidden mb-2">
+      <div className="h-1 bg-bg">
         <div
-          className="h-full bg-accent transition-all duration-300"
-          style={{ width: `${progressPct}%` }}
+          className="h-full bg-gradient-to-r from-accent-dim to-accent transition-all duration-300"
+          style={{ width: `${Math.min(100, progress)}%` }}
         />
       </div>
 
-      {/* Log */}
-      <div ref={logRef} className="max-h-32 overflow-y-auto text-xs text-muted font-mono space-y-0.5">
-        {events.map((evt, i) => (
-          <div key={i}>
-            {evt.type === 'status' && <span>{evt.message}</span>}
-            {evt.type === 'cf' && <span className="text-yellow">{evt.message}</span>}
-            {evt.type === 'search' && <span className="text-accent">{evt.pages} pages, {evt.posts} posts found</span>}
-            {evt.type === 'post' && <span>Post {evt.current}/{evt.total}: {evt.title?.substring(0, 60)}</span>}
-            {evt.type === 'found' && <span className="text-green">{evt.message}</span>}
-            {evt.type === 'download' && <span>Download: {evt.current}/{evt.total}</span>}
-            {evt.type === 'complete' && <span className="text-green">Complete! {evt.total} images ({evt.duration})</span>}
-            {evt.type === 'error' && <span className="text-red">Error: {evt.message}</span>}
+      {/* Stats */}
+      {stats && (
+        <div className="px-4 py-1 text-xs text-muted">{stats}</div>
+      )}
+
+      {/* Log console */}
+      <div ref={logRef} className="h-36 overflow-y-auto px-4 py-2 font-mono text-xs leading-relaxed">
+        {logs.map(log => (
+          <div key={log.id} className={LOG_COLORS[log.type] || 'text-text'}>
+            [{log.time}] {log.msg}
           </div>
         ))}
       </div>
 
-      {job.result && (
-        <div className="mt-2 text-xs text-green">
-          {job.result.total} images downloaded ({job.result.duration})
-        </div>
-      )}
+      {/* Image grid */}
+      {folder && <ImageGrid folder={folder} />}
     </div>
-  );
+  )
 }

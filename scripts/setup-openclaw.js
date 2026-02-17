@@ -43,6 +43,7 @@ const OPENCLAW_CONFIG = path.join(OPENCLAW_DIR, 'openclaw.json');
 const OPENCLAW_WORKSPACE = path.join(OPENCLAW_DIR, 'workspace');
 
 const SANDBOX_MODE = process.argv.includes('--sandbox');
+const WEBCLAW_KEY_FILE = path.join(HOME, '.webclaw-key');
 
 function log(msg) { console.log(`[setup] ${msg}`); }
 function warn(msg) { console.log(`[setup] ⚠ ${msg}`); }
@@ -200,6 +201,7 @@ function updateWorkspace() {
 - Start scraping: \`webclaw start <URL> <keyword>\`
 - Check status: \`webclaw status [jobId]\`
 - List recent jobs: \`webclaw list\`
+- List downloaded files: \`webclaw files [path]\` (requires API key)
 `;
       fs.writeFileSync(toolsPath, tools);
       log('TOOLS.md updated');
@@ -279,6 +281,76 @@ function printManualConfig() {
   }
 }
 
+// --- 4. Provision API Key ---
+
+function provisionApiKey() {
+  log('Checking API Key...');
+
+  // If key file already exists, skip
+  if (fs.existsSync(WEBCLAW_KEY_FILE)) {
+    const existing = fs.readFileSync(WEBCLAW_KEY_FILE, 'utf-8').trim();
+    if (existing.startsWith('wih_')) {
+      log(`API Key already provisioned: ${existing.slice(0, 12)}...`);
+      return;
+    }
+  }
+
+  // Try to read auth-config.json from the project's data directory
+  // Desktop app stores in userData, server stores in project dir
+  const possiblePaths = [
+    path.join(PROJECT_ROOT, 'auth-config.json'),
+    path.join(HOME, '.config', 'webimage-claw', 'auth-config.json'),
+    path.join(HOME, '.config', 'WebImageClaw', 'auth-config.json'),
+  ];
+
+  let authConfig = null;
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      try {
+        authConfig = JSON.parse(fs.readFileSync(p, 'utf-8'));
+        log(`Found auth config: ${p}`);
+        break;
+      } catch {}
+    }
+  }
+
+  if (!authConfig) {
+    log('No auth-config.json found. API Key will be provisioned when you first set up admin password.');
+    log('After setup, generate an API Key from the Dashboard > API Keys section.');
+    log(`Save it to: ${WEBCLAW_KEY_FILE}`);
+    return;
+  }
+
+  // Generate an API Key programmatically
+  try {
+    const crypto = require('crypto');
+    const keyRaw = crypto.randomBytes(32).toString('hex');
+    const apiKey = `wih_${keyRaw}`;
+    const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
+
+    if (!authConfig.apiKeys) authConfig.apiKeys = [];
+    authConfig.apiKeys.push({
+      id: crypto.randomUUID(),
+      name: 'OpenClaw (auto-provisioned)',
+      keyHash,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Write back auth-config
+    const configPath = possiblePaths.find(p => fs.existsSync(p));
+    fs.writeFileSync(configPath, JSON.stringify(authConfig, null, 2));
+
+    // Save key to file
+    fs.writeFileSync(WEBCLAW_KEY_FILE, apiKey + '\n', { mode: 0o600 });
+    log(`API Key generated and saved to ${WEBCLAW_KEY_FILE}`);
+    log(`Key: ${apiKey.slice(0, 12)}... (full key in file)`);
+  } catch (err) {
+    warn(`Failed to provision API Key: ${err.message}`);
+    log('Generate an API Key manually from the Dashboard > API Keys section.');
+    log(`Then save it to: ${WEBCLAW_KEY_FILE}`);
+  }
+}
+
 // --- Main ---
 
 log('WebImageClaw — OpenClaw Integration Setup');
@@ -294,6 +366,8 @@ log('');
 
 if (configOk) {
   updateWorkspace();
+  log('');
+  provisionApiKey();
 }
 
 log('');

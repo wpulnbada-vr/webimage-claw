@@ -1,60 +1,64 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react'
 
-export default function ImageGrid({ images, folder }) {
-  const [lightbox, setLightbox] = useState(null);
+export default function ImageGrid({ folder }) {
+  const [files, setFiles] = useState([])
 
-  if (!images || images.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-muted text-sm">
-        Select a job or start scraping to view images
-      </div>
-    );
-  }
+  useEffect(() => {
+    fetch(`/api/folder-files/${encodeURIComponent(folder)}`)
+      .then(r => r.json())
+      .then(setFiles)
+      .catch(() => {})
+  }, [folder])
+
+  if (files.length === 0) return null
+
+  const shown = files.slice(0, 40)
 
   return (
-    <div className="flex-1 overflow-y-auto p-4">
-      {folder && (
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-muted">{images.length} images</span>
+    <div className="border-t border-border px-4 py-3">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-xs font-semibold">{files.length}개 이미지</span>
+        <div className="flex gap-3">
+          <a
+            href={`/downloads/${encodeURIComponent(folder)}/`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-accent hover:underline"
+          >
+            폴더 열기
+          </a>
           <a
             href={`/api/zip/${encodeURIComponent(folder)}`}
-            className="text-xs text-accent hover:text-accent-hover px-3 py-1 border border-accent/30 rounded transition"
+            download
+            className="text-xs text-green hover:underline"
+            onClick={(e) => {
+              e.preventDefault()
+              const a = document.createElement('a')
+              a.href = `/api/zip/${encodeURIComponent(folder)}`
+              a.download = `${folder}.zip`
+              document.body.appendChild(a)
+              a.click()
+              document.body.removeChild(a)
+            }}
           >
-            Download ZIP
+            ZIP 다운로드
           </a>
         </div>
-      )}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
-        {images.map((img, i) => (
+      </div>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-1.5">
+        {shown.map(file => (
           <div
-            key={img.name || i}
-            className="aspect-square bg-surface rounded overflow-hidden cursor-pointer hover:ring-2 ring-accent/50 transition"
-            onClick={() => setLightbox(img)}
+            key={file.name}
+            className="aspect-square rounded overflow-hidden border border-border cursor-pointer hover:border-accent transition-colors"
+            onClick={() => window.open(file.url, '_blank')}
           >
-            <img
-              src={img.url}
-              alt={img.name}
-              loading="lazy"
-              className="w-full h-full object-cover"
-            />
+            <img src={file.url} loading="lazy" alt={file.name} className="w-full h-full object-cover" />
           </div>
         ))}
       </div>
-
-      {/* Lightbox */}
-      {lightbox && (
-        <div
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center cursor-pointer"
-          onClick={() => setLightbox(null)}
-        >
-          <img
-            src={lightbox.url}
-            alt={lightbox.name}
-            className="max-w-[90vw] max-h-[90vh] object-contain"
-          />
-          <div className="absolute bottom-4 text-sm text-white/70">{lightbox.name}</div>
-        </div>
+      {files.length > 40 && (
+        <div className="text-xs text-muted mt-2">... 외 {files.length - 40}개</div>
       )}
     </div>
-  );
+  )
 }
