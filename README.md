@@ -332,6 +332,7 @@ webclaw list                   # List recent jobs
 | DELETE | `/api/jobs/:id` | Delete a job |
 | GET | `/api/files/:folder` | List downloaded files |
 | GET | `/api/zip/:folder` | Download as ZIP |
+| GET | `/browse/:folder` | Paginated image gallery |
 
 ### Build
 

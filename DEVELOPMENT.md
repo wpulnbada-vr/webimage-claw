@@ -225,6 +225,14 @@ Abort a running job. Returns `{ status: 'aborted' }`.
 
 Delete a job from memory and history.
 
+#### GET `/browse/:folder` (`routes/browse.js`)
+
+Paginated image gallery for browsing large download folders. Displays 200 images per page with lazy loading, pagination controls, and links to ZIP download and raw file listing.
+
+```
+http://localhost:3100/browse/landscape?page=2
+```
+
 #### GET `/api/files/:folder` (`routes/files.js`)
 
 List image files in a download folder.
