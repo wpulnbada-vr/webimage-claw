@@ -32,7 +32,7 @@ class JobManager extends EventEmitter {
   }
 
   _addToHistory(job) {
-    const history = this._loadHistory();
+    let history = this._loadHistory();
     const idx = history.findIndex(h => h.id === job.id);
     const entry = {
       id: job.id,
@@ -49,6 +49,16 @@ class JobManager extends EventEmitter {
       history[idx] = entry;
     } else {
       history.unshift(entry);
+    }
+    // Remove zero-file duplicates: if this job completed with results,
+    // delete older entries with the same url+keyword that have 0 files
+    if (job.status === 'completed' && job.result?.total > 0) {
+      history = history.filter(h =>
+        h.id === job.id ||
+        h.url !== job.url ||
+        h.keyword !== job.keyword ||
+        (h.result?.total || 0) > 0
+      );
     }
     if (history.length > 200) history.length = 200;
     this._saveHistory(history);
