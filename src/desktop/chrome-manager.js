@@ -1,4 +1,4 @@
-const { findChrome } = require('../core/chrome-finder');
+const { findChrome } = require('../core/scraper/chrome-finder');
 
 async function ensureChrome(cachePath, mainWindow) {
   const existing = findChrome(cachePath);
