@@ -65,7 +65,7 @@ class ImageScraper extends EventEmitter {
     let totalDownloaded = 0;
 
     try {
-      this.emit('status', { message: '브라우저 시작 중...' });
+      this.emit('status', { message: 'Launching browser...' });
       this.browser = await puppeteer.launch({
         headless: 'new',
         args: [
@@ -111,18 +111,18 @@ class ImageScraper extends EventEmitter {
         }
       });
 
-      this.emit('status', { message: `${url} 접속 중...` });
+      this.emit('status', { message: `Navigating to ${url}...` });
       await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       const cfPassed = await this._waitForCloudflare();
       if (!cfPassed) {
-        this.emit('error', { message: 'Cloudflare 우회 실패 (30초 타임아웃)' });
+        this.emit('error', { message: 'Cloudflare bypass failed (30s timeout)' });
         return { success: false, total: 0, folder: saveDir };
       }
 
       let posts = [];
       if (keyword) {
-        this.emit('status', { message: `"${keyword}" 검색 중...` });
+        this.emit('status', { message: `Searching for "${keyword}"...` });
         posts = await this._searchPosts(url, keyword, maxPages);
         this.emit('search', { pages: posts._pageCount || 1, posts: posts.length });
       } else {
@@ -130,7 +130,7 @@ class ImageScraper extends EventEmitter {
       }
 
       if (posts.length === 0) {
-        this.emit('status', { message: '검색 결과가 없습니다.' });
+        this.emit('status', { message: 'No search results found.' });
         this.emit('complete', { total: 0, folder: folderName, duration: this._duration(startTime) });
         return { success: true, total: 0, folder: saveDir };
       }
@@ -150,7 +150,7 @@ class ImageScraper extends EventEmitter {
         newImgs.forEach(u => allImageUrls.add(u));
 
         if (newImgs.length > 0) {
-          this.emit('found', { count: newImgs.length, message: `${newImgs.length}개 이미지 발견` });
+          this.emit('found', { count: newImgs.length, message: `${newImgs.length} images found` });
         }
 
         if (newImgs.length > 0 && this._cdp && !this._jsDisabledMode) {
@@ -256,10 +256,10 @@ class ImageScraper extends EventEmitter {
     for (let i = 0; i < maxWait; i++) {
       const title = await this.page.title().catch(() => '');
       if (!title.includes('Just a moment') && !title.includes('Checking')) {
-        this.emit('cf', { message: `Cloudflare 통과! (${i}초)` });
+        this.emit('cf', { message: `Cloudflare passed! (${i}s)` });
         return true;
       }
-      this.emit('cf', { message: `Cloudflare 우회 중... (${i + 1}초)` });
+      this.emit('cf', { message: `Cloudflare bypass in progress... (${i + 1}s)` });
       await sleep(1000);
     }
     return false;
@@ -276,7 +276,7 @@ class ImageScraper extends EventEmitter {
       const currentUrl = this.page.url();
       if (currentUrl === 'about:blank' || !currentUrl.startsWith('http')) {
         this._jsDisabledMode = true;
-        this.emit('status', { message: 'JS-free 모드 전환' });
+        this.emit('status', { message: 'Switching to JS-free mode' });
         await this.page.setJavaScriptEnabled(false);
         await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 25000 });
         await sleep(1000);
@@ -306,7 +306,7 @@ class ImageScraper extends EventEmitter {
     const wpResults = await this._wpSearchPosts(baseUrl, keyword, maxPages);
     if (wpResults.length > 0) return wpResults;
 
-    this.emit('status', { message: '카테고리 브라우징으로 전환...' });
+    this.emit('status', { message: 'Switching to category browsing...' });
     return this._browseCategoryPosts(baseUrl, keyword, maxPages);
   }
 
@@ -328,7 +328,7 @@ class ImageScraper extends EventEmitter {
         searchUrl = `${origin}/page/${pageNum}/?s=${encodeURIComponent(keyword)}`;
       }
 
-      this.emit('status', { message: `검색 페이지 ${pageNum} 스캔 중...` });
+      this.emit('status', { message: `Scanning search page ${pageNum}...` });
 
       try {
         await this._safeGoto(searchUrl);
@@ -475,7 +475,7 @@ class ImageScraper extends EventEmitter {
         pageUrl = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}page=${pageNum}`;
       }
 
-      this.emit('status', { message: `페이지 ${pageNum} 스캔 중...` });
+      this.emit('status', { message: `Scanning page ${pageNum}...` });
 
       try {
         await this._safeGoto(pageUrl);
@@ -504,7 +504,7 @@ class ImageScraper extends EventEmitter {
       const matched = posts.filter(p => p.title.toLowerCase().includes(kwLower));
       if (matched.length > 0) {
         allPosts.push(...matched);
-        this.emit('status', { message: `페이지 ${pageNum}: ${matched.length}개 매칭 (전체 ${posts.length}개 중)` });
+        this.emit('status', { message: `Page ${pageNum}: ${matched.length} matches (of ${posts.length} total)` });
       }
 
       const hasNext = html.includes(`page=${pageNum + 1}`) || html.includes(`/page/${pageNum + 1}`);
@@ -552,7 +552,7 @@ class ImageScraper extends EventEmitter {
           const currentPageUrl = this.page.url();
           if (currentPageUrl === 'about:blank' || !currentPageUrl.startsWith('http')) {
             this._jsDisabledMode = true;
-            this.emit('status', { message: 'JS-free 모드로 전환' });
+            this.emit('status', { message: 'Switching to JS-free mode' });
             await this.page.setJavaScriptEnabled(false);
             await this.page.goto(currentUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
             await sleep(800);
@@ -627,7 +627,7 @@ class ImageScraper extends EventEmitter {
       try {
         const result = await Promise.race([pageWork, pageTimeout]);
         if (result === 'timeout') {
-          this.emit('status', { message: `페이지 타임아웃, 스킵: ${currentUrl.split('/').pop()}` });
+          this.emit('status', { message: `Page timeout, skipping: ${currentUrl.split('/').pop()}` });
           await this.page.goto('about:blank', { timeout: 5000 }).catch(() => {});
           continue;
         }
@@ -771,7 +771,7 @@ class ImageScraper extends EventEmitter {
     const sec = Math.floor((Date.now() - startTime) / 1000);
     const min = Math.floor(sec / 60);
     const s = sec % 60;
-    return min > 0 ? `${min}분 ${s}초` : `${s}초`;
+    return min > 0 ? `${min}m ${s}s` : `${s}s`;
   }
 
   abort() {

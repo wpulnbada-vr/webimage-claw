@@ -123,16 +123,16 @@ function createTray() {
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: '열기',
+      label: 'Open',
       click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } },
     },
     {
-      label: '다운로드 폴더',
+      label: 'Downloads Folder',
       click: () => { shell.openPath(DOWNLOADS_DIR); },
     },
     { type: 'separator' },
     {
-      label: '데이터 초기화',
+      label: 'Reset Data',
       click: () => {
         if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
         showResetDialog();
@@ -140,7 +140,7 @@ function createTray() {
     },
     { type: 'separator' },
     {
-      label: '종료',
+      label: 'Quit',
       click: () => { app.isQuitting = true; app.quit(); },
     },
   ]);
@@ -200,7 +200,7 @@ app.whenReady().then(async () => {
     try {
       chromePath = await ensureChrome(CHROME_CACHE_DIR, mainWindow);
     } catch (err) {
-      dialog.showErrorBox('Chrome 오류', err.message);
+      dialog.showErrorBox('Chrome Error', err.message);
       app.isQuitting = true;
       app.quit();
       return;
@@ -220,7 +220,7 @@ app.whenReady().then(async () => {
     mainWindow.loadURL(`http://127.0.0.1:${serverPort}`);
   } catch (err) {
     console.error('[Startup Error]', err);
-    dialog.showErrorBox('시작 오류', err.message);
+    dialog.showErrorBox('Startup Error', err.message);
     app.isQuitting = true;
     app.quit();
   }

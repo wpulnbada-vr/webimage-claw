@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
- * WebImageClaw — OpenClaw 연동 셋업 스크립트
+ * WebImageClaw — OpenClaw Integration Setup Script
  *
- * 일반 사용자가 OpenClaw 공식 설치 후 WebImageClaw를 연동할 때 실행.
- * 크로스 플랫폼 (Windows, macOS, Linux) 지원.
+ * Run this after installing OpenClaw to integrate WebImageClaw.
+ * Cross-platform support (Windows, macOS, Linux).
  *
- * 수행 작업:
- *   1. webclaw CLI를 사용자 경로에 설치
- *   2. OpenClaw openclaw.json에 pathPrepend/sandbox 설정 추가
- *   3. 워크스페이스 TOOLS.md, SOUL.md 업데이트
+ * Steps:
+ *   1. Install webclaw CLI to user PATH
+ *   2. Add pathPrepend/sandbox config to OpenClaw openclaw.json
+ *   3. Update workspace TOOLS.md and SOUL.md
  *
- * 사용법:
+ * Usage:
  *   node scripts/setup-openclaw.js [--sandbox]
  */
 
@@ -50,7 +50,7 @@ function warn(msg) { console.log(`[setup] ⚠ ${msg}`); }
 // --- 1. Install webclaw CLI ---
 
 function installCLI() {
-  log('webclaw CLI 설치 중...');
+  log('Installing webclaw CLI...');
 
   if (!fs.existsSync(USER_BIN)) {
     fs.mkdirSync(USER_BIN, { recursive: true });
@@ -63,24 +63,24 @@ function installCLI() {
     // Create .cmd wrapper for Windows
     const cmdPath = path.join(USER_BIN, 'webclaw.cmd');
     fs.writeFileSync(cmdPath, `@echo off\r\nnode "%~dp0webclaw.js" %*\r\n`);
-    log(`설치: ${cmdPath}`);
+    log(`Installed: ${cmdPath}`);
   } else {
     // Create shell wrapper for Unix
     const binPath = path.join(USER_BIN, 'webclaw');
     fs.writeFileSync(binPath, `#!/bin/bash\nexec node "${dest}" "$@"\n`);
     fs.chmodSync(binPath, '755');
-    log(`설치: ${binPath}`);
+    log(`Installed: ${binPath}`);
   }
 
   // Check PATH
   const pathDirs = (process.env.PATH || '').split(IS_WINDOWS ? ';' : ':');
   if (!pathDirs.some(d => path.resolve(d) === path.resolve(USER_BIN))) {
-    warn(`${USER_BIN} 이 PATH에 없습니다.`);
+    warn(`${USER_BIN} is not in your PATH.`);
     if (IS_WINDOWS) {
-      log(`PowerShell에서 실행: [Environment]::SetEnvironmentVariable("PATH", "$env:PATH;${USER_BIN}", "User")`);
+      log(`Run in PowerShell: [Environment]::SetEnvironmentVariable("PATH", "$env:PATH;${USER_BIN}", "User")`);
     } else {
-      log(`셸 설정에 추가: export PATH="${USER_BIN}:$PATH"`);
-      log(`예: echo 'export PATH="${USER_BIN}:$PATH"' >> ~/.bashrc`);
+      log(`Add to your shell config: export PATH="${USER_BIN}:$PATH"`);
+      log(`Example: echo 'export PATH="${USER_BIN}:$PATH"' >> ~/.bashrc`);
     }
   }
 }
@@ -88,11 +88,11 @@ function installCLI() {
 // --- 2. Configure OpenClaw ---
 
 function configureOpenClaw() {
-  log('OpenClaw 설정 확인 중...');
+  log('Checking OpenClaw configuration...');
 
   if (!fs.existsSync(OPENCLAW_DIR)) {
-    warn('OpenClaw 설치를 찾을 수 없습니다 (~/.openclaw/).');
-    warn('먼저 OpenClaw를 설치해주세요: https://openclaw.ai');
+    warn('OpenClaw installation not found (~/.openclaw/).');
+    warn('Please install OpenClaw first: https://openclaw.ai');
     return false;
   }
 
@@ -106,8 +106,8 @@ function configureOpenClaw() {
       cleaned = cleaned.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
       config = JSON.parse(cleaned);
     } catch (err) {
-      warn(`openclaw.json 파싱 실패: ${err.message}`);
-      warn('수동 설정이 필요합니다.');
+      warn(`Failed to parse openclaw.json: ${err.message}`);
+      warn('Manual configuration required.');
       printManualConfig();
       return false;
     }
@@ -125,12 +125,12 @@ function configureOpenClaw() {
       !config.tools.exec.pathPrepend.includes(USER_BIN)) {
     config.tools.exec.pathPrepend.push(normalizedBin);
     modified = true;
-    log(`pathPrepend에 ${normalizedBin} 추가`);
+    log(`Added ${normalizedBin} to pathPrepend`);
   }
 
   // Sandbox mode configuration
   if (SANDBOX_MODE) {
-    log('Docker sandbox 모드 설정 중...');
+    log('Configuring Docker sandbox mode...');
 
     if (!config.agents) config.agents = {};
     if (!config.agents.defaults) config.agents.defaults = {};
@@ -158,7 +158,7 @@ function configureOpenClaw() {
       modified = true;
     }
 
-    log('sandbox Docker 설정 완료');
+    log('Docker sandbox configuration complete');
   }
 
   if (modified) {
@@ -166,13 +166,13 @@ function configureOpenClaw() {
     if (fs.existsSync(OPENCLAW_CONFIG)) {
       const backup = OPENCLAW_CONFIG + '.backup.' + Date.now();
       fs.copyFileSync(OPENCLAW_CONFIG, backup);
-      log(`기존 설정 백업: ${backup}`);
+      log(`Backed up existing config: ${backup}`);
     }
 
     fs.writeFileSync(OPENCLAW_CONFIG, JSON.stringify(config, null, 2));
-    log('openclaw.json 업데이트 완료');
+    log('openclaw.json updated');
   } else {
-    log('openclaw.json 이미 설정됨, 변경 없음');
+    log('openclaw.json already configured, no changes needed');
   }
 
   return true;
@@ -181,11 +181,11 @@ function configureOpenClaw() {
 // --- 3. Update workspace files ---
 
 function updateWorkspace() {
-  log('워크스페이스 파일 업데이트 중...');
+  log('Updating workspace files...');
 
   if (!fs.existsSync(OPENCLAW_WORKSPACE)) {
-    warn(`워크스페이스 디렉토리 없음: ${OPENCLAW_WORKSPACE}`);
-    warn('OpenClaw setup 명령을 먼저 실행하세요: openclaw setup');
+    warn(`Workspace directory not found: ${OPENCLAW_WORKSPACE}`);
+    warn('Run OpenClaw setup first: openclaw setup');
     return;
   }
 
@@ -196,18 +196,18 @@ function updateWorkspace() {
     if (!tools.includes('webclaw')) {
       tools += `
 ### webclaw
-- WebImageClaw 이미지 스크래퍼 (호스트 PC 서버 연동)
-- 스크랩 시작: \`webclaw start <URL> <키워드>\`
-- 상태 확인: \`webclaw status [작업ID]\`
-- 최근 목록: \`webclaw list\`
+- WebImageClaw image scraper (connects to host PC server)
+- Start scraping: \`webclaw start <URL> <keyword>\`
+- Check status: \`webclaw status [jobId]\`
+- List recent jobs: \`webclaw list\`
 `;
       fs.writeFileSync(toolsPath, tools);
-      log('TOOLS.md 업데이트 완료');
+      log('TOOLS.md updated');
     } else {
-      log('TOOLS.md 이미 webclaw 포함, 스킵');
+      log('TOOLS.md already contains webclaw, skipped');
     }
   } else {
-    warn('TOOLS.md 없음, 스킵');
+    warn('TOOLS.md not found, skipped');
   }
 
   // SOUL.md
@@ -215,9 +215,10 @@ function updateWorkspace() {
   if (fs.existsSync(soulPath)) {
     let soul = fs.readFileSync(soulPath, 'utf-8');
     if (!soul.includes('webclaw')) {
-      // Find a good insertion point
-      const insertMarker = soul.includes('도구 사용') ? '도구 사용' : null;
-      const webcrawRule = `\n- **이미지 대량 다운로드** → exec 도구로 \`webclaw start <URL> <키워드>\` 실행\n  - 예: "피아 이미지 받아줘 https://example.com" → \`webclaw start https://example.com 피아\`\n`;
+      // Find a good insertion point (supports both English and Korean section headers)
+      const insertMarker = soul.includes('Tool Usage') ? 'Tool Usage' :
+                           soul.includes('도구 사용') ? '도구 사용' : null;
+      const webcrawRule = `\n- **Bulk image download** → use exec tool: \`webclaw start <URL> <keyword>\`\n  - Example: "download landscape images from https://example.com" → \`webclaw start https://example.com landscape\`\n`;
 
       if (insertMarker) {
         // Insert after the section that mentions tools
@@ -242,12 +243,12 @@ function updateWorkspace() {
       }
 
       fs.writeFileSync(soulPath, soul);
-      log('SOUL.md 업데이트 완료');
+      log('SOUL.md updated');
     } else {
-      log('SOUL.md 이미 webclaw 포함, 스킵');
+      log('SOUL.md already contains webclaw, skipped');
     }
   } else {
-    warn('SOUL.md 없음, 스킵');
+    warn('SOUL.md not found, skipped');
   }
 }
 
@@ -255,9 +256,9 @@ function updateWorkspace() {
 
 function printManualConfig() {
   log('');
-  log('=== 수동 설정 방법 ===');
+  log('=== Manual Configuration ===');
   log('');
-  log('openclaw.json에 다음 설정을 추가하세요:');
+  log('Add the following to openclaw.json:');
   log('');
   log('{');
   log('  "tools": {');
@@ -268,7 +269,7 @@ function printManualConfig() {
   log('}');
   log('');
   if (SANDBOX_MODE) {
-    log('Sandbox 모드 추가 설정:');
+    log('Additional sandbox mode config:');
     log('{');
     log('  "agents": { "defaults": { "sandbox": { "docker": {');
     log(`    "binds": ["${path.join(USER_BIN, 'webclaw.js')}:/workspace/webclaw.js:ro"],`);
@@ -280,9 +281,9 @@ function printManualConfig() {
 
 // --- Main ---
 
-log('WebImageClaw — OpenClaw 연동 셋업');
-log(`플랫폼: ${PLATFORM}, 홈: ${HOME}`);
-log(`모드: ${SANDBOX_MODE ? 'Docker Sandbox' : 'Host (sandbox=off)'}`);
+log('WebImageClaw — OpenClaw Integration Setup');
+log(`Platform: ${PLATFORM}, Home: ${HOME}`);
+log(`Mode: ${SANDBOX_MODE ? 'Docker Sandbox' : 'Host (sandbox=off)'}`);
 log('');
 
 installCLI();
@@ -296,16 +297,16 @@ if (configOk) {
 }
 
 log('');
-log('=== 셋업 완료 ===');
+log('=== Setup Complete ===');
 log('');
-log('다음 단계:');
-log('  1. WebImageClaw 서버가 실행 중인지 확인');
-log('     - 데스크톱 앱 실행 또는: node src/server/index.js');
-log('  2. OpenClaw 재시작 (gateway 재시작)');
-log('  3. Discord에서 테스트: "이미지 받아줘 https://example.com 키워드"');
+log('Next steps:');
+log('  1. Make sure the WebImageClaw server is running');
+log('     - Launch the desktop app or run: node src/server/index.js');
+log('  2. Restart the OpenClaw gateway');
+log('  3. Test in Discord: "download images from https://example.com keyword"');
 if (SANDBOX_MODE) {
   log('');
-  log('Sandbox 모드 참고:');
-  log('  - sandbox 컨테이너 재생성 필요 (기존 컨테이너 삭제 후 자동 생성)');
-  log('  - WebImageClaw 서버는 호스트에서 0.0.0.0:3100 으로 실행해야 함');
+  log('Sandbox mode notes:');
+  log('  - Sandbox containers must be recreated (delete existing, auto-created on next run)');
+  log('  - WebImageClaw server must listen on 0.0.0.0:3100 on the host');
 }

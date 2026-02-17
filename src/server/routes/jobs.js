@@ -20,7 +20,7 @@ module.exports = function(jobManager) {
   router.get('/:id/summary', (req, res) => {
     const summary = jobManager.getJobSummary(req.params.id);
     if (!summary) {
-      return res.status(404).type('text/plain').send('작업을 찾을 수 없습니다.');
+      return res.status(404).type('text/plain').send('Job not found.');
     }
     res.type('text/plain').send(summary);
   });

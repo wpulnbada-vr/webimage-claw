@@ -201,10 +201,10 @@ Single job detail.
 Plain text summary optimized for CLI/LLM consumption (minimal tokens):
 
 ```
-상태: 다운로드 중
-키워드: landscape
-진행: 245/1200 이미지 (20%)
-경과: 12분 30초
+Status: Downloading
+Keyword: landscape
+Progress: 245/1200 images (20%)
+Elapsed: 12m 30s
 ```
 
 #### GET `/api/progress/:jobId` (`routes/progress.js`)
@@ -214,7 +214,7 @@ Server-Sent Events stream. Replays past events, then streams new ones in real-ti
 ```
 data: {"type":"download","current":1,"total":100,"filename":"img001.jpg"}
 
-data: {"type":"complete","total":100,"folder":"landscape","duration":"5분 30초"}
+data: {"type":"complete","total":100,"folder":"landscape","duration":"5m 30s"}
 ```
 
 #### POST `/api/abort/:id`

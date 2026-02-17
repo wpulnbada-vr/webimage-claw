@@ -106,7 +106,7 @@ class JobManager extends EventEmitter {
     job.status = 'running';
     job.startedAt = new Date().toISOString();
     this._updateHistoryItem(job.id, { status: 'running', startedAt: job.startedAt });
-    this.emit('job:progress', job.id, { type: 'status', message: '작업 시작' });
+    this.emit('job:progress', job.id, { type: 'status', message: 'Job started' });
 
     const scraper = new ImageScraper();
     job.scraper = scraper;
@@ -277,31 +277,31 @@ class JobManager extends EventEmitter {
       const history = this._loadHistory();
       const h = history.find(h => h.id === jobId);
       if (!h) return null;
-      const statusMap = { completed: '완료', failed: '실패', aborted: '중단', queued: '대기', running: '실행 중' };
-      let text = `상태: ${statusMap[h.status] || h.status}\n`;
-      text += `키워드: ${h.keyword || '없음'}\n`;
+      const statusMap = { completed: 'Completed', failed: 'Failed', aborted: 'Aborted', queued: 'Queued', running: 'Running' };
+      let text = `Status: ${statusMap[h.status] || h.status}\n`;
+      text += `Keyword: ${h.keyword || 'none'}\n`;
       if (h.result) {
-        text += `결과: ${h.result.total}개 이미지 (${h.result.duration})\n`;
+        text += `Result: ${h.result.total} images (${h.result.duration})\n`;
       }
-      if (h.error) text += `오류: ${h.error}\n`;
+      if (h.error) text += `Error: ${h.error}\n`;
       return text;
     }
 
-    const statusMap = { completed: '완료', failed: '실패', aborted: '중단', queued: '대기 중', running: '다운로드 중' };
-    let text = `상태: ${statusMap[job.status] || job.status}\n`;
-    text += `키워드: ${job.keyword || '없음'}\n`;
+    const statusMap = { completed: 'Completed', failed: 'Failed', aborted: 'Aborted', queued: 'Queued', running: 'Downloading' };
+    let text = `Status: ${statusMap[job.status] || job.status}\n`;
+    text += `Keyword: ${job.keyword || 'none'}\n`;
 
     if (job.lastEvent) {
       const e = job.lastEvent;
       if (e.type === 'download' && e.total > 0) {
         const pct = Math.round((e.current / e.total) * 100);
-        text += `진행: ${e.current}/${e.total} 이미지 (${pct}%)\n`;
+        text += `Progress: ${e.current}/${e.total} images (${pct}%)\n`;
       } else if (e.type === 'search') {
-        text += `검색: ${e.pages}페이지, ${e.posts}개 포스트\n`;
+        text += `Search: ${e.pages} pages, ${e.posts} posts\n`;
       } else if (e.type === 'post') {
-        text += `포스트: ${e.current}/${e.total}\n`;
+        text += `Post: ${e.current}/${e.total}\n`;
       } else if (e.type === 'complete') {
-        text += `결과: ${e.total}개 이미지 (${e.duration})\n`;
+        text += `Result: ${e.total} images (${e.duration})\n`;
       }
     }
 
@@ -309,13 +309,13 @@ class JobManager extends EventEmitter {
       const elapsed = Math.floor((Date.now() - new Date(job.startedAt).getTime()) / 1000);
       const min = Math.floor(elapsed / 60);
       const sec = elapsed % 60;
-      text += `경과: ${min > 0 ? min + '분 ' : ''}${sec}초\n`;
+      text += `Elapsed: ${min > 0 ? min + 'm ' : ''}${sec}s\n`;
     }
 
     if (job.result) {
-      text += `결과: ${job.result.total}개 이미지 (${job.result.duration})\n`;
+      text += `Result: ${job.result.total} images (${job.result.duration})\n`;
     }
-    if (job.error) text += `오류: ${job.error}\n`;
+    if (job.error) text += `Error: ${job.error}\n`;
 
     return text;
   }

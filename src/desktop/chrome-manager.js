@@ -10,7 +10,7 @@ async function ensureChrome(cachePath, mainWindow) {
   console.log('[Chrome] Not found, downloading Chrome for Testing...');
   if (mainWindow) {
     mainWindow.webContents.executeJavaScript(
-      `document.title = 'Chrome 다운로드 중... (최초 1회)'`
+      `document.title = 'Downloading Chrome... (first time only)'`
     ).catch(() => {});
   }
 
@@ -28,7 +28,7 @@ async function ensureChrome(cachePath, mainWindow) {
           const pct = Math.round((downloadedBytes / totalBytes) * 100);
           mainWindow.setProgressBar(pct / 100);
           mainWindow.webContents.executeJavaScript(
-            `document.title = 'Chrome 다운로드 중... ${pct}%'`
+            `document.title = 'Downloading Chrome... ${pct}%'`
           ).catch(() => {});
         }
       },
@@ -50,7 +50,7 @@ async function ensureChrome(cachePath, mainWindow) {
       console.log(`[Chrome] Fallback to system Chrome: ${fallback}`);
       return fallback;
     }
-    throw new Error('Chrome을 찾을 수 없습니다. Chrome 브라우저를 설치해주세요.');
+    throw new Error('Chrome not found. Please install Google Chrome.');
   }
 }
 

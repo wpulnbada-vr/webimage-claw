@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// WebImageClaw CLI — OpenClaw exec 도구
-// Node.js built-in http만 사용 (외부 의존성 없음)
+// WebImageClaw CLI — OpenClaw exec tool
+// Uses only Node.js built-in http (no external dependencies)
 //
-// 서버 탐지 순서:
-//   1. WEBCLAW_SERVER 환경변수 (명시적 지정)
-//   2. http://localhost:3100 (호스트에서 직접 실행)
+// Server discovery order:
+//   1. WEBCLAW_SERVER env var (explicit override)
+//   2. http://localhost:3100 (host execution)
 //   3. http://host.docker.internal:3100 (Docker sandbox — macOS/Windows)
 //   4. http://172.17.0.1:3100 (Docker sandbox — Linux docker0 bridge)
 
@@ -13,7 +13,7 @@ const os = require('os');
 
 const DEFAULT_PORT = 3100;
 const POLL_INTERVAL = 10000;
-const MAX_POLL_TIME = 300000; // 5분
+const MAX_POLL_TIME = 300000; // 5 min
 
 // --- Server Discovery ---
 
@@ -158,12 +158,12 @@ function log(msg) {
 async function ensureServer() {
   SERVER = await discoverServer();
   if (!SERVER) {
-    log('오류: WebImageClaw 서버를 찾을 수 없습니다.');
+    log('Error: Cannot find WebImageClaw server.');
     log('');
-    log('확인사항:');
-    log('  1. WebImageClaw 앱 또는 서버가 실행 중인지 확인');
-    log(`  2. 기본 포트: ${DEFAULT_PORT}`);
-    log('  3. 수동 지정: WEBCLAW_SERVER=http://IP:PORT webclaw ...');
+    log('Checklist:');
+    log('  1. Make sure the WebImageClaw app or server is running');
+    log(`  2. Default port: ${DEFAULT_PORT}`);
+    log('  3. Manual override: WEBCLAW_SERVER=http://IP:PORT webclaw ...');
     process.exit(1);
   }
 }
@@ -172,7 +172,7 @@ async function ensureServer() {
 
 async function cmdStart(url, keyword) {
   if (!url) {
-    log('사용법: webclaw start <URL> [키워드]');
+    log('Usage: webclaw start <URL> [keyword]');
     process.exit(1);
   }
 
@@ -182,26 +182,26 @@ async function cmdStart(url, keyword) {
   try {
     data = await request('POST', '/api/scrape', { url, keyword: keyword || '' });
   } catch (err) {
-    log(`오류: 작업 생성 실패 - ${err.message}`);
+    log(`Error: Failed to create job - ${err.message}`);
     process.exit(1);
   }
 
   if (data.error === 'duplicate') {
-    log(`이미 진행 중: ${data.existingJobId}`);
+    log(`Already in progress: ${data.existingJobId}`);
     data = { jobId: data.existingJobId };
   }
 
   if (!data.jobId) {
-    log(`오류: ${data.error || '알 수 없는 오류'}`);
+    log(`Error: ${data.error || 'unknown error'}`);
     process.exit(1);
   }
 
   const jobId = data.jobId;
   let host;
   try { host = new URL(url).hostname; } catch { host = url; }
-  log(`시작: ${keyword || 'direct'} (${host})`);
+  log(`Started: ${keyword || 'direct'} (${host})`);
 
-  // 폴링
+  // Poll for progress
   const startTime = Date.now();
   let lastMsg = '';
 
@@ -215,17 +215,17 @@ async function cmdStart(url, keyword) {
 
     if (typeof summary !== 'string') summary = String(summary);
 
-    const statusLine = summary.match(/상태: (.+)/);
+    const statusLine = summary.match(/Status: (.+)/);
     const status = statusLine ? statusLine[1].trim() : '';
 
-    const progressLine = summary.match(/진행: (.+)/);
-    const resultLine = summary.match(/결과: (.+)/);
-    const searchLine = summary.match(/검색: (.+)/);
+    const progressLine = summary.match(/Progress: (.+)/);
+    const resultLine = summary.match(/Result: (.+)/);
+    const searchLine = summary.match(/Search: (.+)/);
 
     let msg = '';
-    if (searchLine) msg = `검색 완료: ${searchLine[1]}`;
-    else if (progressLine) msg = `다운로드 중: ${progressLine[1]}`;
-    else if (resultLine) msg = `완료! ${keyword || 'direct'}: ${resultLine[1]}`;
+    if (searchLine) msg = `Search complete: ${searchLine[1]}`;
+    else if (progressLine) msg = `Downloading: ${progressLine[1]}`;
+    else if (resultLine) msg = `Done! ${keyword || 'direct'}: ${resultLine[1]}`;
     else msg = status;
 
     if (msg && msg !== lastMsg) {
@@ -233,21 +233,21 @@ async function cmdStart(url, keyword) {
       lastMsg = msg;
     }
 
-    if (status === '완료' || status === '실패' || status === '중단') {
-      if (resultLine && lastMsg !== `완료! ${keyword || 'direct'}: ${resultLine[1]}`) {
-        log(`완료! ${keyword || 'direct'}: ${resultLine[1]}`);
+    if (status === 'Completed' || status === 'Failed' || status === 'Aborted') {
+      if (resultLine && lastMsg !== `Done! ${keyword || 'direct'}: ${resultLine[1]}`) {
+        log(`Done! ${keyword || 'direct'}: ${resultLine[1]}`);
       }
-      if (status === '실패') {
-        const errorLine = summary.match(/오류: (.+)/);
-        if (errorLine) log(`오류: ${errorLine[1]}`);
+      if (status === 'Failed') {
+        const errorLine = summary.match(/Error: (.+)/);
+        if (errorLine) log(`Error: ${errorLine[1]}`);
       }
       break;
     }
   }
 
   if (Date.now() - startTime >= MAX_POLL_TIME) {
-    log(`타임아웃 (5분). 작업 ID: ${jobId}`);
-    log(`상태 확인: webclaw status ${jobId}`);
+    log(`Timeout (5 min). Job ID: ${jobId}`);
+    log(`Check status: webclaw status ${jobId}`);
   }
 }
 
@@ -259,13 +259,13 @@ async function cmdStatus(jobId) {
       const summary = await request('GET', `/api/jobs/${jobId}/summary`);
       process.stdout.write(typeof summary === 'string' ? summary : JSON.stringify(summary));
     } catch {
-      log('작업을 찾을 수 없습니다.');
+      log('Job not found.');
     }
   } else {
     const jobs = await request('GET', '/api/jobs');
     const active = (Array.isArray(jobs) ? jobs : []).filter(j => j.status === 'running' || j.status === 'queued');
     if (active.length === 0) {
-      log('실행 중인 작업 없음');
+      log('No active jobs');
     } else {
       for (const j of active) {
         log(`[${j.id}] ${j.keyword || 'direct'} — ${j.status}`);
@@ -281,13 +281,13 @@ async function cmdList() {
   const items = (Array.isArray(history) ? history : []).slice(0, 10);
 
   if (items.length === 0) {
-    log('작업 기록 없음');
+    log('No job history');
     return;
   }
 
   for (const h of items) {
     const status = { completed: 'O', failed: 'X', running: '>', queued: '.', aborted: '-' }[h.status] || '?';
-    const total = h.result?.total ? ` (${h.result.total}장)` : '';
+    const total = h.result?.total ? ` (${h.result.total} imgs)` : '';
     let host;
     try { host = new URL(h.url).hostname; } catch { host = h.url; }
     log(`[${status}] ${h.keyword || 'direct'}${total} — ${host}`);
@@ -300,33 +300,33 @@ const [,, cmd, ...args] = process.argv;
 switch (cmd) {
   case 'start':
     cmdStart(args[0], args.slice(1).join(' ')).catch(err => {
-      log(`오류: ${err.message}`);
+      log(`Error: ${err.message}`);
       process.exit(1);
     });
     break;
   case 'status':
     cmdStatus(args[0]).catch(err => {
-      log(`오류: ${err.message}`);
+      log(`Error: ${err.message}`);
       process.exit(1);
     });
     break;
   case 'list':
     cmdList().catch(err => {
-      log(`오류: ${err.message}`);
+      log(`Error: ${err.message}`);
       process.exit(1);
     });
     break;
   default:
     log('WebImageClaw CLI');
     log('');
-    log('사용법:');
-    log('  webclaw start <URL> [키워드]  — 스크래핑 시작');
-    log('  webclaw status [작업ID]       — 상태 확인');
-    log('  webclaw list                  — 최근 작업 목록');
+    log('Usage:');
+    log('  webclaw start <URL> [keyword]  — Start scraping');
+    log('  webclaw status [jobId]         — Check job status');
+    log('  webclaw list                   — List recent jobs');
     log('');
-    log('서버 설정:');
-    log(`  기본 포트: ${DEFAULT_PORT}`);
-    log('  수동 지정: WEBCLAW_SERVER=http://IP:PORT');
-    log('  자동 탐지: localhost → host.docker.internal → 172.17.0.1');
+    log('Server:');
+    log(`  Default port: ${DEFAULT_PORT}`);
+    log('  Manual override: WEBCLAW_SERVER=http://IP:PORT');
+    log('  Auto-discovery: localhost → host.docker.internal → 172.17.0.1');
     break;
 }
