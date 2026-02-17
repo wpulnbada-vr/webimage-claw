@@ -107,6 +107,42 @@ function verifyApiKey(key) {
   return config.apiKeys.some(k => k.key === key);
 }
 
+function generateShareToken(filePath, hours = 24) {
+  const config = loadConfig();
+  if (!config) return null;
+  if (!config.shareLinks) config.shareLinks = [];
+
+  const now = Date.now();
+  config.shareLinks = config.shareLinks.filter(l => new Date(l.expiresAt).getTime() > now);
+
+  const token = crypto.randomBytes(24).toString('hex');
+  const expiresAt = new Date(now + hours * 3600 * 1000).toISOString();
+  config.shareLinks.push({ token, filePath, expiresAt, createdAt: new Date().toISOString() });
+  saveConfig(config);
+  return token;
+}
+
+function verifyShareToken(token) {
+  const config = loadConfig();
+  if (!config || !config.shareLinks) return null;
+  const link = config.shareLinks.find(l => l.token === token);
+  if (!link) return null;
+  if (new Date(link.expiresAt).getTime() < Date.now()) return null;
+  return link;
+}
+
+function deleteShareToken(token) {
+  const config = loadConfig();
+  if (!config || !config.shareLinks) return false;
+  const before = config.shareLinks.length;
+  config.shareLinks = config.shareLinks.filter(l => l.token !== token);
+  if (config.shareLinks.length < before) {
+    saveConfig(config);
+    return true;
+  }
+  return false;
+}
+
 function authMiddleware(req, res, next) {
   const apiKey = req.headers['x-api-key'];
   if (apiKey && verifyApiKey(apiKey)) {
@@ -135,5 +171,8 @@ module.exports = {
   listApiKeys,
   deleteApiKey,
   verifyApiKey,
+  generateShareToken,
+  verifyShareToken,
+  deleteShareToken,
   authMiddleware,
 };

@@ -1,15 +1,27 @@
 import { useState, useRef } from 'react'
 
-export default function FileToolbar({ currentPath, selectedCount, onUpload, onMkdir, onDelete, onDownloadZip, onRefresh }) {
+export default function FileToolbar({
+  currentPath, selectedCount, onUpload, onMkdir, onDelete, onDownloadZip, onRefresh,
+  searchQuery, onSearchChange, sortBy, sortOrder, onSortChange, viewMode, onViewModeChange
+}) {
   const [showMkdir, setShowMkdir] = useState(false)
   const [folderName, setFolderName] = useState('')
   const fileInputRef = useRef(null)
+  const searchTimer = useRef(null)
 
   const handleMkdir = () => {
     if (!folderName.trim()) return
     onMkdir(folderName.trim())
     setFolderName('')
     setShowMkdir(false)
+  }
+
+  const handleSearchInput = (e) => {
+    const value = e.target.value
+    clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => {
+      onSearchChange(value)
+    }, 300)
   }
 
   return (
@@ -69,6 +81,64 @@ export default function FileToolbar({ currentPath, selectedCount, onUpload, onMk
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
       </button>
+
+      {/* Divider */}
+      <div className="w-px h-5 bg-border mx-1" />
+
+      {/* Search */}
+      <div className="relative">
+        <svg className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="text"
+          placeholder="검색..."
+          defaultValue={searchQuery}
+          onChange={handleSearchInput}
+          className="pl-7 pr-2 py-1 text-xs bg-bg border border-border rounded-md text-text focus:outline-none focus:border-accent w-40"
+        />
+      </div>
+
+      {/* Sort dropdown */}
+      <select
+        value={`${sortBy}-${sortOrder}`}
+        onChange={(e) => {
+          const [by, ord] = e.target.value.split('-')
+          onSortChange(by, ord)
+        }}
+        className="px-2 py-1 text-xs bg-bg border border-border rounded-md text-text focus:outline-none focus:border-accent cursor-pointer"
+      >
+        <option value="name-asc">이름 ↑</option>
+        <option value="name-desc">이름 ↓</option>
+        <option value="size-asc">크기 ↑</option>
+        <option value="size-desc">크기 ↓</option>
+        <option value="date-asc">날짜 ↑</option>
+        <option value="date-desc">날짜 ↓</option>
+        <option value="type-asc">종류 ↑</option>
+        <option value="type-desc">종류 ↓</option>
+      </select>
+
+      {/* View mode toggle */}
+      <div className="flex border border-border rounded-md overflow-hidden">
+        <button
+          onClick={() => onViewModeChange('list')}
+          className={`px-2 py-1 cursor-pointer ${viewMode === 'list' ? 'bg-accent/20 text-accent' : 'text-muted hover:text-text'}`}
+          title="리스트 보기"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+          </svg>
+        </button>
+        <button
+          onClick={() => onViewModeChange('grid')}
+          className={`px-2 py-1 cursor-pointer ${viewMode === 'grid' ? 'bg-accent/20 text-accent' : 'text-muted hover:text-text'}`}
+          title="그리드 보기"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+          </svg>
+        </button>
+      </div>
 
       {/* Selection actions */}
       {selectedCount > 0 && (

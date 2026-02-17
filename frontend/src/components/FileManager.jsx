@@ -1,8 +1,18 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useAuth } from './AuthGate'
 import LoginScreen from './LoginScreen'
 import FileToolbar from './fm/FileToolbar'
 import FileList from './fm/FileList'
+import FileGrid from './fm/FileGrid'
+import ImagePreview from './fm/ImagePreview'
+import UploadDropZone from './fm/UploadDropZone'
+import ContextMenu from './fm/ContextMenu'
+import ShareModal from './fm/ShareModal'
+
+const IMAGE_EXT = /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i
+const VIDEO_EXT = /\.(mp4|webm|mov|avi|mkv)$/i
+const AUDIO_EXT = /\.(mp3|wav|ogg|flac|aac|m4a)$/i
+const TEXT_EXT = /\.(txt|json|md|log|csv|js|py|ts|jsx|tsx|html|css|xml|yml|yaml|sh|conf|ini|toml|env|sql)$/i
 
 export default function FileManager() {
   const auth = useAuth()
@@ -12,6 +22,22 @@ export default function FileManager() {
   const [selected, setSelected] = useState(new Set())
   const [loading, setLoading] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [previewIndex, setPreviewIndex] = useState(null)
+
+  // Phase 1: view mode, sort, search
+  const [viewMode, setViewMode] = useState('list')
+  const [sortBy, setSortBy] = useState('name')
+  const [sortOrder, setSortOrder] = useState('asc')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState(null)
+
+  // Phase 2: clipboard, context menu, share
+  const [clipboard, setClipboard] = useState(null) // { mode: 'copy'|'cut', items: [{path, name}] }
+  const [contextMenu, setContextMenu] = useState(null) // { x, y, idx }
+  const [shareModal, setShareModal] = useState(null) // { path }
+  const containerRef = useRef(null)
+
+  const token = localStorage.getItem('wih_token')
 
   const headers = useCallback(() => ({
     ...auth?.getAuthHeaders(),
@@ -20,19 +46,22 @@ export default function FileManager() {
 
   const authHeaders = useCallback(() => auth?.getAuthHeaders() || {}, [auth])
 
-  const loadDir = useCallback(async (dirPath) => {
+  const loadDir = useCallback(async (dirPath, sb, so) => {
     setLoading(true)
+    const useSortBy = sb || sortBy
+    const useSortOrder = so || sortOrder
     try {
-      const res = await fetch(`/api/filemanager?path=${encodeURIComponent(dirPath)}`, { headers: authHeaders() })
-      if (res.status === 401) return // will show login
+      const res = await fetch(`/api/filemanager?path=${encodeURIComponent(dirPath)}&sortBy=${useSortBy}&order=${useSortOrder}`, { headers: authHeaders() })
+      if (res.status === 401) return
       const data = await res.json()
       setItems(data.items || [])
       setCurrentPath(data.path || '/')
       setSelected(new Set())
+      setSearchResults(null)
     } catch {} finally {
       setLoading(false)
     }
-  }, [authHeaders])
+  }, [authHeaders, sortBy, sortOrder])
 
   const loadStats = useCallback(async () => {
     try {
@@ -48,12 +77,13 @@ export default function FileManager() {
     }
   }, [auth?.authenticated])
 
-  // If not authenticated, show login
   if (!auth?.authenticated) {
     return <LoginScreen onLogin={() => window.location.reload()} />
   }
 
   const navigate = (path) => {
+    setSearchQuery('')
+    setSearchResults(null)
     loadDir(path)
   }
 
@@ -67,8 +97,9 @@ export default function FileManager() {
   }
 
   const handleSelectAll = (selectAll) => {
+    const displayItems = searchResults || items
     if (selectAll) {
-      setSelected(new Set(items.map((_, i) => i)))
+      setSelected(new Set(displayItems.map((_, i) => i)))
     } else {
       setSelected(new Set())
     }
@@ -97,9 +128,10 @@ export default function FileManager() {
   }
 
   const handleDelete = async () => {
-    const selectedItems = [...selected].map(i => items[i])
+    const displayItems = searchResults || items
+    const selectedItems = [...selected].map(i => displayItems[i])
     for (const item of selectedItems) {
-      const itemPath = currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`
+      const itemPath = item.path || (currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`)
       await fetch(`/api/filemanager?path=${encodeURIComponent(itemPath)}`, {
         method: 'DELETE',
         headers: authHeaders(),
@@ -111,9 +143,10 @@ export default function FileManager() {
   }
 
   const handleDownloadZip = async () => {
+    const displayItems = searchResults || items
     const paths = [...selected].map(i => {
-      const item = items[i]
-      return currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`
+      const item = displayItems[i]
+      return item.path || (currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`)
     })
     const res = await fetch('/api/filemanager/download-zip', {
       method: 'POST',
@@ -133,17 +166,176 @@ export default function FileManager() {
     }
   }
 
-  // Breadcrumb
+  const handleRename = async (oldPath, newName) => {
+    const res = await fetch('/api/filemanager/rename', {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ oldPath, newName }),
+    })
+    if (res.ok) loadDir(currentPath)
+  }
+
+  // Search
+  const handleSearch = async (query) => {
+    setSearchQuery(query)
+    if (!query.trim()) {
+      setSearchResults(null)
+      return
+    }
+    try {
+      const res = await fetch(`/api/filemanager/search?q=${encodeURIComponent(query)}&path=${encodeURIComponent(currentPath)}`, { headers: authHeaders() })
+      if (res.ok) {
+        const data = await res.json()
+        setSearchResults(data.results || [])
+        setSelected(new Set())
+      }
+    } catch {}
+  }
+
+  // Sort
+  const handleSortChange = (by, order) => {
+    setSortBy(by)
+    setSortOrder(order)
+    loadDir(currentPath, by, order)
+  }
+
+  // Copy/Move (Phase 2)
+  const handleCopy = () => {
+    const displayItems = searchResults || items
+    const selectedPaths = [...selected].map(i => {
+      const item = displayItems[i]
+      return { path: item.path || (currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`), name: item.name }
+    })
+    setClipboard({ mode: 'copy', items: selectedPaths })
+  }
+
+  const handleCut = () => {
+    const displayItems = searchResults || items
+    const selectedPaths = [...selected].map(i => {
+      const item = displayItems[i]
+      return { path: item.path || (currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`), name: item.name }
+    })
+    setClipboard({ mode: 'cut', items: selectedPaths })
+  }
+
+  const handlePaste = async () => {
+    if (!clipboard) return
+    const endpoint = clipboard.mode === 'cut' ? '/api/filemanager/move' : '/api/filemanager/copy'
+    for (const item of clipboard.items) {
+      const destPath = currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ sourcePath: item.path, destPath }),
+      })
+    }
+    if (clipboard.mode === 'cut') setClipboard(null)
+    loadDir(currentPath)
+    loadStats()
+  }
+
+  // Context Menu
+  const handleContextMenu = (e, idx) => {
+    e.preventDefault()
+    if (!selected.has(idx)) {
+      setSelected(new Set([idx]))
+    }
+    const rect = containerRef.current?.getBoundingClientRect() || { left: 0, top: 0 }
+    setContextMenu({ x: e.clientX - rect.left, y: e.clientY - rect.top, idx })
+  }
+
+  const closeContextMenu = () => setContextMenu(null)
+
+  // Share
+  const handleShare = (itemPath) => {
+    setShareModal({ path: itemPath })
+    closeContextMenu()
+  }
+
+  // Download single file
+  const handleDownloadSingle = (itemPath) => {
+    const a = document.createElement('a')
+    a.href = `/api/filemanager/download?path=${encodeURIComponent(itemPath)}&token=${encodeURIComponent(token || '')}`
+    a.download = ''
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    closeContextMenu()
+  }
+
+  // Preview items (images + video + audio + text)
+  const displayItems = searchResults || items
+  const previewableItems = useMemo(() =>
+    displayItems
+      .map((item, idx) => ({ ...item, _idx: idx }))
+      .filter(item => item.type === 'file' && (IMAGE_EXT.test(item.name) || VIDEO_EXT.test(item.name) || AUDIO_EXT.test(item.name) || TEXT_EXT.test(item.name))),
+    [displayItems]
+  )
+
+  const handlePreview = (fileIdx) => {
+    const pvIdx = previewableItems.findIndex(img => img._idx === fileIdx)
+    if (pvIdx !== -1) setPreviewIndex(pvIdx)
+  }
+
+  // Keyboard shortcuts (Phase 2)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignore when in input/textarea
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return
+
+      if (e.key === 'Escape') {
+        setSelected(new Set())
+        closeContextMenu()
+        setShareModal(null)
+        return
+      }
+      if (e.key === 'Delete') {
+        if (selected.size > 0) setShowDeleteModal(true)
+        return
+      }
+      if (e.key === 'F2') {
+        return
+      }
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'a') {
+          e.preventDefault()
+          handleSelectAll(true)
+        } else if (e.key === 'c') {
+          if (selected.size > 0) { e.preventDefault(); handleCopy() }
+        } else if (e.key === 'x') {
+          if (selected.size > 0) { e.preventDefault(); handleCut() }
+        } else if (e.key === 'v') {
+          if (clipboard) { e.preventDefault(); handlePaste() }
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selected, clipboard, displayItems, currentPath])
+
+  // Close context menu on click outside
+  useEffect(() => {
+    if (!contextMenu) return
+    const handler = () => closeContextMenu()
+    window.addEventListener('click', handler)
+    return () => window.removeEventListener('click', handler)
+  }, [contextMenu])
+
   const pathParts = currentPath === '/' ? [] : currentPath.split('/').filter(Boolean)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" ref={containerRef}>
       {/* Stats Bar */}
       {stats && (
         <div className="flex items-center gap-4 text-xs text-muted">
           <span>{stats.folders}개 폴더</span>
           <span>{stats.files}개 파일</span>
           <span>{stats.totalSize}</span>
+          {clipboard && (
+            <span className="text-accent">
+              {clipboard.mode === 'copy' ? '복사됨' : '잘라내기'}: {clipboard.items.length}개
+            </span>
+          )}
         </div>
       )}
 
@@ -156,6 +348,13 @@ export default function FileManager() {
         onDelete={() => setShowDeleteModal(true)}
         onDownloadZip={handleDownloadZip}
         onRefresh={() => { loadDir(currentPath); loadStats() }}
+        searchQuery={searchQuery}
+        onSearchChange={handleSearch}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
 
       {/* Breadcrumb */}
@@ -170,19 +369,125 @@ export default function FileManager() {
             </span>
           )
         })}
+        {searchResults && (
+          <span className="ml-2 text-accent">
+            검색: "{searchQuery}" ({searchResults.length}건)
+          </span>
+        )}
       </div>
 
-      {/* File List */}
-      {loading ? (
-        <div className="text-sm text-muted text-center py-8">로딩 중...</div>
-      ) : (
-        <FileList
-          items={items}
+      {/* File View */}
+      <UploadDropZone onUpload={handleUpload}>
+        {loading ? (
+          <div className="text-sm text-muted text-center py-8">로딩 중...</div>
+        ) : searchResults ? (
+          /* Search results always in list view */
+          <FileList
+            items={searchResults}
+            currentPath={currentPath}
+            selected={selected}
+            onSelect={handleSelect}
+            onSelectAll={handleSelectAll}
+            onNavigate={navigate}
+            authToken={token}
+            onRename={handleRename}
+            onPreview={handlePreview}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSortChange={handleSortChange}
+            onContextMenu={handleContextMenu}
+          />
+        ) : viewMode === 'grid' ? (
+          <FileGrid
+            items={items}
+            currentPath={currentPath}
+            selected={selected}
+            onSelect={handleSelect}
+            onSelectAll={handleSelectAll}
+            onNavigate={navigate}
+            authToken={token}
+            onRename={handleRename}
+            onPreview={handlePreview}
+            onContextMenu={handleContextMenu}
+          />
+        ) : (
+          <FileList
+            items={items}
+            currentPath={currentPath}
+            selected={selected}
+            onSelect={handleSelect}
+            onSelectAll={handleSelectAll}
+            onNavigate={navigate}
+            authToken={token}
+            onRename={handleRename}
+            onPreview={handlePreview}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSortChange={handleSortChange}
+            onContextMenu={handleContextMenu}
+          />
+        )}
+      </UploadDropZone>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          selectedCount={selected.size}
+          item={displayItems[contextMenu.idx]}
           currentPath={currentPath}
-          selected={selected}
-          onSelect={handleSelect}
-          onSelectAll={handleSelectAll}
-          onNavigate={navigate}
+          hasClipboard={!!clipboard}
+          onClose={closeContextMenu}
+          onOpen={() => {
+            const item = displayItems[contextMenu.idx]
+            const itemPath = item.path || (currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`)
+            if (item.type === 'directory') navigate(itemPath)
+            else handlePreview(contextMenu.idx)
+            closeContextMenu()
+          }}
+          onRename={() => {
+            closeContextMenu()
+          }}
+          onCopy={() => { handleCopy(); closeContextMenu() }}
+          onCut={() => { handleCut(); closeContextMenu() }}
+          onPaste={() => { handlePaste(); closeContextMenu() }}
+          onDownload={() => {
+            if (selected.size > 1) handleDownloadZip()
+            else {
+              const item = displayItems[contextMenu.idx]
+              const itemPath = item.path || (currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`)
+              handleDownloadSingle(itemPath)
+            }
+            closeContextMenu()
+          }}
+          onShare={() => {
+            const item = displayItems[contextMenu.idx]
+            const itemPath = item.path || (currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`)
+            handleShare(itemPath)
+          }}
+          onDelete={() => { setShowDeleteModal(true); closeContextMenu() }}
+        />
+      )}
+
+      {/* Share Modal */}
+      {shareModal && (
+        <ShareModal
+          filePath={shareModal.path}
+          authHeaders={headers()}
+          onClose={() => setShareModal(null)}
+        />
+      )}
+
+      {/* Preview Modal */}
+      {previewIndex !== null && (
+        <ImagePreview
+          images={previewableItems}
+          currentIndex={previewIndex}
+          currentPath={currentPath}
+          authToken={token}
+          onClose={() => setPreviewIndex(null)}
+          onNavigate={setPreviewIndex}
         />
       )}
 

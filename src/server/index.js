@@ -133,6 +133,19 @@ function startServer(options = {}) {
     res.json({ ok: true });
   });
 
+  // --- Share (public, no auth) ---
+  app.get('/api/share/:token', (req, res) => {
+    const link = Auth.verifyShareToken(req.params.token);
+    if (!link) return res.status(404).json({ error: 'Link expired or not found' });
+
+    const filePath = path.join(downloadsDir, link.filePath.replace(/^\/+/, ''));
+    const resolved = path.resolve(filePath);
+    if (!resolved.startsWith(downloadsDir)) return res.status(400).json({ error: 'Invalid path' });
+    if (!fs.existsSync(resolved)) return res.status(404).json({ error: 'File not found' });
+
+    res.download(resolved);
+  });
+
   // --- File Manager API (auth-protected) ---
   app.use('/api/filemanager', FileManagerModule.createRouter(Auth.authMiddleware, downloadsDir));
 

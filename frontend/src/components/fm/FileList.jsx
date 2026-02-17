@@ -1,3 +1,5 @@
+import { useState, useRef, useEffect } from 'react'
+
 const IMAGE_EXT = /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i
 
 function formatSize(bytes) {
@@ -18,8 +20,62 @@ function formatDate(iso) {
   return `${mm}/${dd} ${hh}:${mi}`
 }
 
-export default function FileList({ items, currentPath, selected, onSelect, onSelectAll, onNavigate }) {
+function SortIndicator({ field, sortBy, sortOrder }) {
+  if (field !== sortBy) return null
+  return <span className="ml-1 text-accent">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+}
+
+export default function FileList({ items, currentPath, selected, onSelect, onSelectAll, onNavigate, authToken, onRename, onPreview, sortBy, sortOrder, onSortChange, onContextMenu }) {
   const allSelected = items.length > 0 && selected.size === items.length
+  const [editingIdx, setEditingIdx] = useState(null)
+  const [editName, setEditName] = useState('')
+  const editRef = useRef(null)
+  const clickTimer = useRef(null)
+
+  useEffect(() => {
+    if (editingIdx !== null && editRef.current) {
+      editRef.current.focus()
+      const dotIdx = editName.lastIndexOf('.')
+      editRef.current.setSelectionRange(0, dotIdx > 0 ? dotIdx : editName.length)
+    }
+  }, [editingIdx])
+
+  const handleClickWithDelay = (singleAction, idx, name) => {
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current)
+      clickTimer.current = null
+      setEditingIdx(idx)
+      setEditName(name)
+    } else {
+      clickTimer.current = setTimeout(() => {
+        clickTimer.current = null
+        singleAction()
+      }, 300)
+    }
+  }
+
+  const commitEdit = (idx) => {
+    const item = items[idx]
+    if (editName && editName !== item.name) {
+      const itemPath = currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`
+      onRename(itemPath, editName)
+    }
+    setEditingIdx(null)
+  }
+
+  const cancelEdit = () => {
+    setEditingIdx(null)
+  }
+
+  const handleHeaderClick = (field) => {
+    if (sortBy === field) {
+      onSortChange(field, sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      onSortChange(field, 'asc')
+    }
+  }
+
+  const tokenParam = authToken ? `?token=${encodeURIComponent(authToken)}` : ''
 
   return (
     <div className="bg-surface border border-border rounded-lg overflow-hidden">
@@ -34,9 +90,24 @@ export default function FileList({ items, currentPath, selected, onSelect, onSel
                 className="accent-accent cursor-pointer"
               />
             </th>
-            <th className="text-left p-2 font-medium">이름</th>
-            <th className="text-right p-2 font-medium w-24">크기</th>
-            <th className="text-right p-2 font-medium w-28">수정일</th>
+            <th
+              className="text-left p-2 font-medium cursor-pointer hover:text-accent select-none"
+              onClick={() => handleHeaderClick('name')}
+            >
+              이름<SortIndicator field="name" sortBy={sortBy} sortOrder={sortOrder} />
+            </th>
+            <th
+              className="text-right p-2 font-medium w-24 cursor-pointer hover:text-accent select-none"
+              onClick={() => handleHeaderClick('size')}
+            >
+              크기<SortIndicator field="size" sortBy={sortBy} sortOrder={sortOrder} />
+            </th>
+            <th
+              className="text-right p-2 font-medium w-28 cursor-pointer hover:text-accent select-none"
+              onClick={() => handleHeaderClick('date')}
+            >
+              수정일<SortIndicator field="date" sortBy={sortBy} sortOrder={sortOrder} />
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -59,11 +130,13 @@ export default function FileList({ items, currentPath, selected, onSelect, onSel
             const isImage = item.type === 'file' && IMAGE_EXT.test(item.name)
             const itemPath = currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`
             const isChecked = selected.has(idx)
+            const isEditing = editingIdx === idx
 
             return (
               <tr
                 key={item.name}
                 className={`border-b border-border/50 hover:bg-[#21262d] transition-colors ${isChecked ? 'bg-accent/10' : ''}`}
+                onContextMenu={(e) => onContextMenu?.(e, idx)}
               >
                 <td className="p-2">
                   <input
@@ -81,7 +154,7 @@ export default function FileList({ items, currentPath, selected, onSelect, onSel
                       </svg>
                     ) : isImage ? (
                       <img
-                        src={`/downloads${itemPath}`}
+                        src={`/downloads${itemPath}${tokenParam}`}
                         alt=""
                         className="w-6 h-6 rounded object-cover shrink-0 border border-border"
                         loading="lazy"
@@ -91,26 +164,48 @@ export default function FileList({ items, currentPath, selected, onSelect, onSel
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                       </svg>
                     )}
-                    {item.type === 'directory' ? (
+                    {isEditing ? (
+                      <input
+                        ref={editRef}
+                        type="text"
+                        value={editName}
+                        onChange={e => setEditName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') commitEdit(idx)
+                          if (e.key === 'Escape') cancelEdit()
+                        }}
+                        onBlur={() => commitEdit(idx)}
+                        className="bg-[#21262d] border border-accent rounded px-1.5 py-0.5 text-xs text-text outline-none w-full max-w-[300px]"
+                      />
+                    ) : item.type === 'directory' ? (
                       <button
-                        onClick={() => onNavigate(itemPath)}
+                        onClick={() => handleClickWithDelay(() => onNavigate(itemPath), idx, item.name)}
                         className="text-accent hover:underline truncate cursor-pointer text-left"
                       >
                         {item.name}
                       </button>
-                    ) : (
-                      <a
-                        href={`/downloads${itemPath}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-text hover:text-accent truncate"
+                    ) : isImage ? (
+                      <button
+                        onClick={() => handleClickWithDelay(() => onPreview(idx), idx, item.name)}
+                        className="text-text hover:text-accent truncate cursor-pointer text-left"
                       >
                         {item.name}
-                      </a>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleClickWithDelay(() => window.open(`/downloads${itemPath}${tokenParam}`, '_blank'), idx, item.name)}
+                        className="text-text hover:text-accent truncate cursor-pointer text-left"
+                      >
+                        {item.name}
+                      </button>
                     )}
                   </div>
                 </td>
-                <td className="p-2 text-right text-muted whitespace-nowrap">{formatSize(item.size)}</td>
+                <td className="p-2 text-right text-muted whitespace-nowrap">
+                  {item.type === 'directory' && item.childCount != null
+                    ? `${item.childCount}개 항목`
+                    : formatSize(item.size)}
+                </td>
                 <td className="p-2 text-right text-muted whitespace-nowrap">{formatDate(item.mtime)}</td>
               </tr>
             )
