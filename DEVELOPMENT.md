@@ -1,6 +1,6 @@
 # Development Guide
 
-Technical documentation for developers working on WebImageClaw.
+Technical documentation for developers working on WebClaw.
 
 **Current Version: 0.2.0**
 
@@ -447,7 +447,7 @@ node scripts/setup-openclaw.js --sandbox  # Docker sandbox mode
 **Step 1 — Install CLI:**
 - Copies `webclaw.js` + creates shell/cmd wrapper
 - Linux/macOS: `~/.local/bin/webclaw`
-- Windows: `%LOCALAPPDATA%\WebImageClaw\bin\webclaw.cmd`
+- Windows: `%LOCALAPPDATA%\WebClaw\bin\webclaw.cmd`
 
 **Step 2 — Configure OpenClaw:**
 - Reads `~/.openclaw/openclaw.json`
@@ -469,7 +469,7 @@ node scripts/setup-openclaw.js --sandbox  # Docker sandbox mode
 2. OpenClaw agent reads TOOLS.md/SOUL.md → decides to use `exec` tool
 3. Agent calls: `exec webclaw start https://example.com keyword`
 4. OpenClaw's exec tool runs the command with `pathPrepend` in PATH
-5. webclaw CLI discovers the WebImageClaw server (auto-discovery)
+5. webclaw CLI discovers the WebClaw server (auto-discovery)
 6. CLI creates job via `POST /api/scrape`, polls `GET /api/jobs/:id/summary`
 7. CLI outputs progress to stdout → OpenClaw captures output
 8. Agent formats result and sends Discord reply
@@ -511,8 +511,8 @@ When OpenClaw runs agents in Docker containers:
 
 ```bash
 # Clone
-git clone https://github.com/wpulnbada-vr/webimage-claw.git
-cd webimage-claw
+git clone https://github.com/wpulnbada-vr/webclaw.git
+cd webclaw
 
 # Install all dependencies
 npm install

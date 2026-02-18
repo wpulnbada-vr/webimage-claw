@@ -8,10 +8,10 @@ const { ensureChrome } = require('./chrome-manager');
 // ── Paths ──────────────────────────────────────────────────────────────────────
 const isPackaged = app.isPackaged;
 const appRoot = isPackaged ? path.dirname(app.getPath('exe')) : path.join(__dirname, '..', '..');
-const userDataDir = app.getPath('userData'); // %APPDATA%/WebImageClaw
+const userDataDir = app.getPath('userData'); // %APPDATA%/WebClaw
 const documentsDir = app.getPath('documents');
 
-const DOWNLOADS_DIR = path.join(documentsDir, 'WebImageClaw Downloads');
+const DOWNLOADS_DIR = path.join(documentsDir, 'WebClaw Downloads');
 const HISTORY_FILE = path.join(userDataDir, 'history.json');
 const CHROME_CACHE_DIR = path.join(userDataDir, 'chrome');
 
@@ -33,7 +33,7 @@ if (process.argv.includes('--clear-data')) {
   }
   if (deleteAll && fs.existsSync(DOWNLOADS_DIR)) {
     fs.rmSync(DOWNLOADS_DIR, { recursive: true, force: true });
-    removed.push('WebImageClaw Downloads/');
+    removed.push('WebClaw Downloads/');
   }
   console.log(removed.length > 0 ? `Removed: ${removed.join(', ')}` : 'Nothing to clean up.');
   process.exit(0);
@@ -119,7 +119,7 @@ function createTray() {
   }
 
   tray = new Tray(trayIcon);
-  tray.setToolTip('WebImageClaw');
+  tray.setToolTip('WebClaw');
 
   const contextMenu = Menu.buildFromTemplate([
     {

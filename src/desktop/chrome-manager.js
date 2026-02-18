@@ -37,7 +37,7 @@ async function ensureChrome(cachePath, mainWindow) {
     if (mainWindow) {
       mainWindow.setProgressBar(-1);
       mainWindow.webContents.executeJavaScript(
-        `document.title = 'WebImageClaw'`
+        `document.title = 'WebClaw'`
       ).catch(() => {});
     }
 

@@ -30,7 +30,7 @@ export default function LoginScreen({ onLogin }) {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-surface border border-border rounded-lg p-6 w-full max-w-sm space-y-5">
         <div className="text-center">
-          <h1 className="text-lg font-bold text-accent">WebImageClaw</h1>
+          <h1 className="text-lg font-bold text-accent">WebClaw</h1>
           <p className="text-xs text-muted mt-1">파일 관리 기능을 사용하려면 로그인하세요</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * WebImageClaw — OpenClaw Integration Setup Script
+ * WebClaw — OpenClaw Integration Setup Script
  *
- * Run this after installing OpenClaw to integrate WebImageClaw.
+ * Run this after installing OpenClaw to integrate WebClaw.
  * Cross-platform support (Windows, macOS, Linux).
  *
  * Steps:
@@ -26,7 +26,7 @@ const PLATFORM = process.platform;
 const IS_WINDOWS = PLATFORM === 'win32';
 const IS_MAC = PLATFORM === 'darwin';
 
-// WebImageClaw project root
+// WebClaw project root
 const PROJECT_ROOT = path.join(__dirname, '..');
 
 // webclaw CLI source
@@ -34,7 +34,7 @@ const WEBCLAW_SRC = path.join(PROJECT_ROOT, 'src', 'cli', 'webclaw.js');
 
 // User bin directory for CLI tools
 const USER_BIN = IS_WINDOWS
-  ? path.join(HOME, 'AppData', 'Local', 'WebImageClaw', 'bin')
+  ? path.join(HOME, 'AppData', 'Local', 'WebClaw', 'bin')
   : path.join(HOME, '.local', 'bin');
 
 // OpenClaw config paths
@@ -197,7 +197,7 @@ function updateWorkspace() {
     if (!tools.includes('webclaw')) {
       tools += `
 ### webclaw
-- WebImageClaw image scraper (connects to host PC server)
+- WebClaw image scraper (connects to host PC server)
 - Start scraping: \`webclaw start <URL> <keyword>\`
 - Check status: \`webclaw status [jobId]\`
 - List recent jobs: \`webclaw list\`
@@ -299,8 +299,8 @@ function provisionApiKey() {
   // Desktop app stores in userData, server stores in project dir
   const possiblePaths = [
     path.join(PROJECT_ROOT, 'auth-config.json'),
-    path.join(HOME, '.config', 'webimage-claw', 'auth-config.json'),
-    path.join(HOME, '.config', 'WebImageClaw', 'auth-config.json'),
+    path.join(HOME, '.config', 'webclaw', 'auth-config.json'),
+    path.join(HOME, '.config', 'WebClaw', 'auth-config.json'),
   ];
 
   let authConfig = null;
@@ -353,7 +353,7 @@ function provisionApiKey() {
 
 // --- Main ---
 
-log('WebImageClaw — OpenClaw Integration Setup');
+log('WebClaw — OpenClaw Integration Setup');
 log(`Platform: ${PLATFORM}, Home: ${HOME}`);
 log(`Mode: ${SANDBOX_MODE ? 'Docker Sandbox' : 'Host (sandbox=off)'}`);
 log('');
@@ -374,7 +374,7 @@ log('');
 log('=== Setup Complete ===');
 log('');
 log('Next steps:');
-log('  1. Make sure the WebImageClaw server is running');
+log('  1. Make sure the WebClaw server is running');
 log('     - Launch the desktop app or run: node src/server/index.js');
 log('  2. Restart the OpenClaw gateway');
 log('  3. Test in Discord: "download images from https://example.com keyword"');
@@ -382,5 +382,5 @@ if (SANDBOX_MODE) {
   log('');
   log('Sandbox mode notes:');
   log('  - Sandbox containers must be recreated (delete existing, auto-created on next run)');
-  log('  - WebImageClaw server must listen on 0.0.0.0:3100 on the host');
+  log('  - WebClaw server must listen on 0.0.0.0:3100 on the host');
 }

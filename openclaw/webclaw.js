@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// WebImageClaw CLI — OpenClaw exec tool
+// WebClaw CLI — OpenClaw exec tool
 // Uses only Node.js built-in http (no external dependencies)
 //
 // Server discovery order:
@@ -172,10 +172,10 @@ function log(msg) {
 async function ensureServer() {
   SERVER = await discoverServer();
   if (!SERVER) {
-    log('Error: Cannot find WebImageClaw server.');
+    log('Error: Cannot find WebClaw server.');
     log('');
     log('Checklist:');
-    log('  1. Make sure the WebImageClaw app or server is running');
+    log('  1. Make sure the WebClaw app or server is running');
     log(`  2. Default port: ${DEFAULT_PORT}`);
     log('  3. Manual override: WEBCLAW_SERVER=http://IP:PORT webclaw ...');
     process.exit(1);
@@ -382,7 +382,7 @@ switch (cmd) {
     });
     break;
   default:
-    log('WebImageClaw CLI');
+    log('WebClaw CLI');
     log('');
     log('Usage:');
     log('  webclaw start <URL> [keyword]  — Start scraping');

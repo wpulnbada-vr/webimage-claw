@@ -1,7 +1,7 @@
 {
-  "name": "webimage-claw",
+  "name": "webclaw",
   "version": "0.2.0",
-  "description": "WebImageClaw - Image Scraper with OpenClaw Integration",
+  "description": "WebClaw - Image Scraper with OpenClaw Integration",
   "main": "src/desktop/main.js",
   "scripts": {
     "start": "node src/server/index.js",

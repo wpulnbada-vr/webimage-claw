@@ -7,4 +7,5 @@ history.json
 frontend/node_modules/
 frontend/dist/
 .jwt-secret
-.jwt-secret
+auth-config.json
+.omc/

@@ -17,7 +17,7 @@ const healthRoute = require('./routes/health');
 const browseRoute = require('./routes/browse');
 
 /**
- * Start the WebImageClaw Express server.
+ * Start the WebClaw Express server.
  */
 function startServer(options = {}) {
   const {
@@ -197,7 +197,7 @@ function startServer(options = {}) {
 
   return new Promise((resolve) => {
     const server = app.listen(port, host, () => {
-      console.log(`[WebImageClaw] http://${host}:${port}`);
+      console.log(`[WebClaw] http://${host}:${port}`);
       jobManager.recoverOrphanedJobs();
       resolve({ app, server, port, jobManager });
     });

@@ -195,7 +195,7 @@ async function sendDiscordAlert(config, type, data) {
     color = 0xd29922;
     content = `**디스크 경고**\n남은 용량: ${data.freeMB}MB\n임계값: ${data.thresholdMB}MB`;
   } else if (type === 'test') {
-    content = 'WebImageClaw 알림 테스트\nDiscord 알림이 정상 작동합니다!';
+    content = 'WebClaw 알림 테스트\nDiscord 알림이 정상 작동합니다!';
   } else {
     return;
   }
@@ -204,7 +204,7 @@ async function sendDiscordAlert(config, type, data) {
     const res = await fetch(config.discord.webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ embeds: [{ description: content, color, footer: { text: 'WebImageClaw Monitor' }, timestamp: new Date().toISOString() }] }),
+      body: JSON.stringify({ embeds: [{ description: content, color, footer: { text: 'WebClaw Monitor' }, timestamp: new Date().toISOString() }] }),
     });
     return res.ok;
   } catch { return false; }

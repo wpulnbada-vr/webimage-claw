@@ -1,4 +1,4 @@
-# WebImageHere Scraper Refactoring
+# WebHere Scraper Refactoring
 
 ## Overview
 
@@ -84,9 +84,9 @@ class BaseSiteAdapter {
 
 | 프로젝트 | 경로 | 이전 | 이후 |
 |----------|------|------|------|
-| Host | `~/webimagehere/` | `scraper.js` (1,125줄) | `scraper/` (15파일) |
-| Desktop | `~/webimagehere-desktop/server/` | `scraper.js` (884줄) | `scraper/` (동일) |
-| Claw | `~/webimage-claw/src/core/` | `scraper.js` (796줄) + `chrome-finder.js` + `constants.js` | `scraper/` (동일) |
+| Host | `~/project/webhere-host/` | `scraper.js` (1,125줄) | `scraper/` (15파일) |
+| Desktop | `~/project/webhere-desktop/server/` | `scraper.js` (884줄) | `scraper/` (동일) |
+| Claw | `~/project/webclaw/src/core/` | `scraper.js` (796줄) + `chrome-finder.js` + `constants.js` | `scraper/` (동일) |
 
 3개 프로젝트가 완전히 동일한 scraper/ 코드를 공유. 하위 호환성 유지 (`require('./scraper')` → `scraper/index.js`).
 

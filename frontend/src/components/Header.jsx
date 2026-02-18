@@ -15,7 +15,7 @@ export default function Header({ currentTab, onTabChange, authenticated, onLogou
   return (
     <header className="border-b border-border px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <h1 className="text-xl font-bold text-accent">WebImageClaw</h1>
+        <h1 className="text-xl font-bold text-accent">WebClaw</h1>
         <span className="text-sm text-muted hidden sm:inline">Web Image Downloader + OpenClaw</span>
       </div>
       <div className="flex items-center gap-3">

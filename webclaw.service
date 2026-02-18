@@ -1,18 +1,18 @@
-# WebImageClaw systemd service
-# Install: sudo cp webimage-claw.service /etc/systemd/system/
+# WebClaw systemd service
+# Install: sudo cp webclaw.service /etc/systemd/system/
 #          sudo systemctl daemon-reload
-#          sudo systemctl enable --now webimage-claw
+#          sudo systemctl enable --now webclaw
 #
 # Edit User, WorkingDirectory, and ExecStart to match your environment.
 
 [Unit]
-Description=WebImageClaw Image Scraper Server
+Description=WebClaw Image Scraper Server
 After=network.target
 
 [Service]
 Type=simple
 User=%i
-WorkingDirectory=/home/%i/webimage-claw
+WorkingDirectory=/home/%i/project/webclaw
 ExecStart=/usr/bin/env node src/server/index.js
 Restart=on-failure
 RestartSec=5

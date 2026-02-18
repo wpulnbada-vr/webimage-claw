@@ -1,5 +1,5 @@
-appId: com.webimageclaw.desktop
-productName: WebImageClaw
+appId: com.webclaw.desktop
+productName: WebClaw
 directories:
   output: dist
   buildResources: build

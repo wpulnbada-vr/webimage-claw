@@ -346,7 +346,7 @@ class JobManager extends EventEmitter {
     const orphaned = history.filter(h => h.status === 'running' || h.status === 'queued');
     if (orphaned.length === 0) return;
 
-    console.log(`[WebImageClaw] Recovering ${orphaned.length} interrupted job(s)...`);
+    console.log(`[WebClaw] Recovering ${orphaned.length} interrupted job(s)...`);
     for (const h of orphaned) {
       const job = {
         id: h.id,
@@ -370,7 +370,7 @@ class JobManager extends EventEmitter {
       } else {
         this.queue.push(h.id);
       }
-      console.log(`[WebImageClaw]   → Re-queued: "${h.keyword}" (${h.url})`);
+      console.log(`[WebClaw]   → Re-queued: "${h.keyword}" (${h.url})`);
     }
   }
 }
