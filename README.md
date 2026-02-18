@@ -1,27 +1,29 @@
-# WebImageClaw
+# WebClaw
 
-> **v0.2.0** — OpenClaw 연동 웹 드라이브
+> Self-hosted image archiver with a web dashboard and OpenClaw integration.
 
-**OpenClaw lacked a built-in way to download images from websites, which was frustrating — so I built this.**
-
-Tell your OpenClaw Discord bot "download images from this site" and it will automatically browse the website and save images to your PC. Use the **Web Drive** to manage downloaded files remotely — search, sort, preview, share, copy/move — all from your browser or through OpenClaw commands.
+Organize and archive publicly available images from websites you own or have permission to access. Manage downloaded files through a web dashboard or remotely via OpenClaw bot commands.
 
 ```
 In Discord:
-  You: "@MartinClaw download landscape images from https://example.com/gallery"
-  Bot: "Done! Downloaded 1,523 images in 45 minutes 12 seconds."
+  You: "@MartinClaw archive images from https://example.com/gallery"
+  Bot: "Done! Archived 1,523 images in 45 minutes 12 seconds."
 
-  You: "@MartinClaw show my downloaded files"
-  Bot: "📁 landscape/ (1,523 files), portrait/ (892 files), ..."
+  You: "@MartinClaw show my files"
+  Bot: "gallery/ (1,523 files), portrait/ (892 files), ..."
 ```
 
 ---
 
-## Screenshots
+## Disclaimer
 
-| Scraping Dashboard | Monitoring & API Keys |
-|:--:|:--:|
-| ![Main Dashboard](docs/screenshot-main.png) | ![Monitoring](docs/screenshot-monitor.png) |
+This tool is intended for **personal archival** and **educational purposes only**. Users are solely responsible for ensuring their usage complies with:
+
+- The **terms of service** of any website they access
+- Applicable **copyright and intellectual property** laws
+- **robots.txt** directives and site access policies
+
+The developers assume no liability for misuse of this software. Do not use this tool to download copyrighted content without explicit permission from the content owner.
 
 ---
 
@@ -29,44 +31,43 @@ In Discord:
 
 ```
 Discord / Telegram User
-  -> OpenClaw Bot (MartinClaw)
-    -> exec webclaw start <URL> <keyword>
-      -> WebImageClaw Server (running on your PC)
+  -> OpenClaw Bot
+    -> webclaw CLI
+      -> WebClaw Server (running on your PC)
         -> Chrome browses the website
-        -> Automatically downloads images
+        -> Archives publicly available images
       <- Progress / result report
-    <- "Done! 1,523 images downloaded"
+    <- "Done! 1,523 images archived"
 ```
 
 - **OpenClaw**: AI assistant for Discord, WhatsApp, Telegram, etc. ([openclaw.ai](https://openclaw.ai))
-- **WebImageClaw**: Website image scraper with dashboard (this project)
-- **webclaw CLI**: Command-line tool that bridges OpenClaw and WebImageClaw
+- **WebClaw**: Image archiver with web dashboard (this project)
+- **webclaw CLI**: Command-line bridge between OpenClaw and WebClaw
 
 ---
 
 ## Features
 
-### Image Scraping
-- **Batch Image Download** — Enter a URL and keyword to collect all matching images
-- **Smart Page Navigation** — Follows pagination, galleries, and sub-pages
+### Image Archiving
+- **Batch Processing** — Enter a URL and keyword to collect matching images
+- **Smart Navigation** — Follows pagination, galleries, and sub-pages
 - **Lazy-load Aware** — Scrolls to trigger lazy content, parses `data-src` and `srcset`
-- **High-fidelity Capture** — Chrome DevTools Protocol captures full-resolution originals
+- **CDP Capture** — Chrome DevTools Protocol captures original-quality images
 - **Duplicate Filtering** — Skips thumbnails, icons, and duplicates by size/pattern
 - **Job Queue** — 2 concurrent jobs with automatic queuing
 
-### Web Drive (v0.2)
+### Web Drive
 - **Grid / List View** — Toggle between image thumbnail grid and detailed file list
 - **Search & Sort** — Find files by name, sort by name/size/date
-- **Share Links** — Generate temporary share URLs for files (token-based, 24h expiry)
+- **Share Links** — Generate temporary share URLs (token-based, 24h expiry)
 - **Copy & Move** — Copy or move files/folders between directories
-- **Context Menu** — Right-click for quick actions (copy, move, delete, share)
-- **Drag & Drop Upload** — Drop files directly into the browser to upload
+- **Context Menu** — Right-click for quick actions
+- **Drag & Drop Upload** — Drop files directly into the browser
 - **Image Preview** — Click to view full-size images with zoom
-- **OpenClaw Web Drive** — Manage files remotely via Discord/Telegram bot commands
 
 ### Monitoring & Management
-- **System Monitoring** — Real-time CPU, memory, disk, Puppeteer status
-- **Job Statistics** — Success rate donut, site/keyword charts, 30-day activity graph
+- **System Monitoring** — Real-time CPU, memory, disk, browser status
+- **Job Statistics** — Success rate, site/keyword charts, 30-day activity graph
 - **Discord Alerts** — Webhook notifications for completion, failure, and disk warnings
 - **ZIP Export** — Download selected files as .zip archive
 - **History Management** — Persistent history with bulk clear
@@ -78,7 +79,7 @@ Discord / Telegram User
 - **Remote Dashboard** — Access via VPN to manage files from anywhere
 
 ### OpenClaw Integration
-- **webclaw CLI** — Zero-dependency CLI (Node.js built-in `http` only) for Docker sandbox compatibility
+- **webclaw CLI** — Zero-dependency CLI for Docker sandbox compatibility
 - **Auto Server Discovery** — localhost > host.docker.internal > Docker gateway > bridge IPs
 - **API Key Auth** — `WEBCLAW_API_KEY` env var or `~/.webclaw-key` file
 - **Auto Provisioning** — `setup-openclaw.js` installs CLI, configures OpenClaw, generates API key
@@ -105,13 +106,13 @@ Discord / Telegram User
 
 ---
 
-## Installation Guide
+## Installation
 
-### Step 1: Download WebImageClaw
+### Step 1: Download
 
 ```bash
-git clone https://github.com/wpulnbada-vr/webimage-claw.git
-cd webimage-claw
+git clone https://github.com/wpulnbada-vr/webclaw.git
+cd webclaw
 npm install
 
 # Build the frontend
@@ -136,13 +137,13 @@ curl http://localhost:3100/api/health
 
 | Tab | Description |
 |-----|-------------|
-| **Jobs** | Enter URLs, start scraping, view real-time progress and history |
+| **Jobs** | Enter URLs, start archiving, view real-time progress and history |
 | **Monitoring** | System metrics, job statistics, Discord alerts, API key management |
 | **Files** | Browse downloads, upload/delete files, download as ZIP (requires login) |
 
 ---
 
-## OpenClaw Integration Guide
+## OpenClaw Integration
 
 ### Prerequisites
 
@@ -152,7 +153,7 @@ curl http://localhost:3100/api/health
    openclaw onboard
    ```
 
-2. **WebImageClaw server running**
+2. **WebClaw server running**
    ```bash
    npm start
    ```
@@ -198,7 +199,7 @@ chmod +x ~/.local/bin/webclaw ~/.local/bin/webclaw.js
 }
 ```
 
-**3. Generate an API key** from the Dashboard > Monitoring > API Keys section, then save it:
+**3. Generate an API key** from Dashboard > Monitoring > API Keys, then save it:
 ```bash
 echo "wih_your_key_here" > ~/.webclaw-key
 chmod 600 ~/.webclaw-key
@@ -221,11 +222,11 @@ webclaw files /                 # List files (requires API key)
 ## Running as a Linux Service
 
 ```bash
-sudo cp webimage-claw.service /etc/systemd/system/
-sudo nano /etc/systemd/system/webimage-claw.service  # Edit User and paths
+sudo cp webclaw.service /etc/systemd/system/
+sudo nano /etc/systemd/system/webclaw.service  # Edit User and paths
 sudo systemctl daemon-reload
-sudo systemctl enable webimage-claw
-sudo systemctl start webimage-claw
+sudo systemctl enable webclaw
+sudo systemctl start webclaw
 ```
 
 ---
@@ -236,7 +237,7 @@ If OpenClaw runs inside a Docker sandbox, allow containers to reach port 3100:
 
 ```bash
 # UFW
-sudo ufw allow from 172.16.0.0/12 to any port 3100 proto tcp comment 'WebImageClaw Docker access'
+sudo ufw allow from 172.16.0.0/12 to any port 3100 proto tcp comment 'WebClaw Docker access'
 ```
 
 ### Server Discovery Order
@@ -262,7 +263,7 @@ npm run electron               # Start as Electron desktop app
 ### webclaw CLI
 
 ```bash
-webclaw start <URL> [keyword]  # Start scraping
+webclaw start <URL> [keyword]  # Start archiving
 webclaw status [jobId]         # Check job status
 webclaw list                   # List recent jobs
 webclaw files [path]           # List downloaded files (requires API key)
@@ -273,7 +274,7 @@ webclaw files [path]           # List downloaded files (requires API key)
 | Method | Path | Auth | Description |
 |--------|------|:----:|-------------|
 | GET | `/api/health` | | Server health check |
-| POST | `/api/scrape` | | Start scraping (`{url, keyword}`) |
+| POST | `/api/scrape` | | Start archiving (`{url, keyword}`) |
 | GET | `/api/jobs` | | List active jobs |
 | GET | `/api/jobs/:id/summary` | | Job summary (plain text) |
 | GET | `/api/progress/:id` | | Progress SSE stream |
@@ -309,9 +310,9 @@ npm run build:linux             # Linux package
 
 ## Troubleshooting
 
-### "Cannot find WebImageClaw server"
+### "Cannot find WebClaw server"
 - Check if the server is running: `curl http://localhost:3100/api/health`
-- Start it if not: `cd webimage-claw && npm start`
+- Start it if not: `cd webclaw && npm start`
 - In Docker: check firewall rules (see Docker section above)
 
 ### "Chrome not found"
@@ -329,10 +330,10 @@ npm run build:linux             # Linux package
 ## Project Structure
 
 ```
-webimage-claw/
+webclaw/
 ├── src/
 │   ├── core/                 # Core engine
-│   │   ├── scraper.js        # Image scraper (Puppeteer + CDP)
+│   │   ├── scraper.js        # Image archiver (Puppeteer + CDP)
 │   │   ├── job-manager.js    # Job queue management
 │   │   ├── auth.js           # Authentication (bcrypt + JWT + API keys)
 │   │   ├── filemanager.js    # File management API
@@ -355,7 +356,7 @@ webimage-claw/
 ├── openclaw/
 │   └── webclaw.js            # CLI copy for OpenClaw workspace
 ├── downloads/                # Downloaded images (git-ignored)
-├── webimage-claw.service     # systemd service file
+├── webclaw.service           # systemd service file
 ├── electron-builder.yml      # Electron build config
 └── package.json
 ```
@@ -365,7 +366,3 @@ webimage-claw/
 ## License
 
 MIT License
-
----
-
-*WebImageClaw v0.2 — Image scraper + web drive, powered by OpenClaw.*
