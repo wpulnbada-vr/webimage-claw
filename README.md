@@ -71,6 +71,7 @@ Discord / Telegram User
 - **Discord Alerts** — Webhook notifications for completion, failure, and disk warnings
 - **ZIP Export** — Download selected files as .zip archive
 - **History Management** — Persistent history with bulk clear
+- **Chrome Process Management** — Automatic cleanup of orphaned Chrome processes on startup, PID-based force kill, and graceful shutdown
 
 ### Security & Remote Access
 - **Admin Authentication** — Password-protected dashboard (bcrypt + JWT)

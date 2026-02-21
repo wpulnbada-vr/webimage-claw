@@ -2,7 +2,14 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const { execFileSync } = require('child_process');
 // serve-index removed for security
+
+// Kill orphaned Chrome processes from previous runs on startup
+try {
+  execFileSync('pkill', ['-f', 'puppeteer_dev_profile'], { stdio: 'ignore', timeout: 5000 });
+  console.log('[WebClaw] Cleaned up orphaned Chrome processes');
+} catch {}
 
 const JobManager = require('../core/job-manager');
 const Auth = require('../core/auth');
@@ -194,6 +201,25 @@ function startServer(options = {}) {
     const ok = await Monitor.sendDiscordAlert(config, 'test', {});
     res.json({ ok: !!ok });
   });
+
+  // Graceful shutdown: clean up all running browsers before exit
+  async function gracefulShutdown(signal) {
+    console.log(`[WebClaw] ${signal} received, shutting down...`);
+    const cleanups = [];
+    for (const job of jobManager.getAllJobs ? jobManager.getAllJobs() : []) {
+      if (job.status === 'running' && job.scraper) {
+        job.scraper.abort();
+        if (job.scraper._bm) cleanups.push(job.scraper._bm.cleanup());
+      }
+    }
+    if (cleanups.length > 0) {
+      await Promise.allSettled(cleanups);
+      console.log(`[WebClaw] Cleaned up ${cleanups.length} browser(s)`);
+    }
+    process.exit(0);
+  }
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
   return new Promise((resolve) => {
     const server = app.listen(port, host, () => {
